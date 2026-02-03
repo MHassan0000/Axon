@@ -1,5 +1,5 @@
 import React from "react";
-// import Navbar from "@/components/ui/shared/Navbar";
+import Navbar from "@/components/shared/Navbar";
 // import Footer from "@/components/ui/shared/Footer";
 
 export default function DashboardLayout({
@@ -10,7 +10,7 @@ export default function DashboardLayout({
     return (
         <main className="flex flex-col min-h-screen">
             <div>
-                {/* <Navbar /> */}
+                <Navbar />
             </div>
             <div className="flex-1">{children}</div>
             {/* <Footer /> */}
