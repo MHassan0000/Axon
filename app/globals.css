@@ -1,5 +1,21 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+
+@theme {
+  /* Dark mode configuration */
+  --color-dark-bg: #0a0a0b;
+  --color-dark-surface: #18181b;
+  --color-dark-surface-elevated: #27272a;
+  --color-dark-border: #3f3f46;
+
+  /* Enable dark mode via class strategy */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+    }
+  }
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -7,6 +23,13 @@ html {
 body {
   margin: 0;
   padding: 0;
-  background: black;
-  color: white;
+  @apply bg-[#0a0a0b] text-zinc-100;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+/* Light mode overrides */
+:root:not(.dark) body {
+  @apply bg-zinc-50 text-zinc-900;
 }
