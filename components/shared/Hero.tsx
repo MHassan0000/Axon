@@ -20,7 +20,7 @@ export default function Hero() {
           className="flex flex-col items-center justify-center gap-6 md:gap-8 px-4"
         >
           {/* Main Headline */}
-          <h1 className="mt-8 bg-linear-to-br from-zinc-200 to-zinc-400 dark:from-slate-300 dark:to-slate-500 py-4 bg-clip-text text-center text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight text-transparent leading-tight">
+          <h1 className="mt-8 bg-linear-to-br from-slate-600 to-slate-800 dark:from-slate-300 dark:to-slate-500 py-4 bg-clip-text text-center text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight text-transparent leading-tight">
             Build projects
             <br />
             the right way
@@ -51,22 +51,7 @@ export default function Hero() {
             </Link>
           </div>
 
-          {/* Trust Indicators */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ delay: 0.8, duration: 0.6 }}
-            className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 mt-6 md:mt-8 text-zinc-500 dark:text-slate-400 text-sm"
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-              <span>Always Free to Start</span>
-            </div>
-            <div className="hidden sm:block w-px h-4 bg-zinc-400 dark:bg-slate-600" />
-            <div className="flex items-center gap-2">
-              <span>✨ No Credit Card Required</span>
-            </div>
-          </motion.div>
+          
         </motion.div>
       </LampContainer>
     </div>

@@ -12,10 +12,10 @@ export default function Navbar() {
   
   return (
     <div className="relative w-full flex items-center justify-center">
-      <div className="fixed top-10 inset-x-0 max-w-7xl mx-auto z-50 px-4">
+      <div className="fixed top-0 inset-x-0 max-w-7xl mx-auto z-100 px-4">
         {/* Rounded Navbar Container */}
         <nav 
-          className="relative rounded-full border border-transparent dark:bg-black dark:border-white/20 bg-white shadow-input"
+          className="relative rounded-full border border-slate-200 dark:border-white/20 bg-slate-50/90 dark:bg-black backdrop-blur-lg shadow-lg"
           onMouseLeave={() => setActive(null)}
         >
           <div className="flex items-center justify-between px-8 py-6">
