@@ -4,7 +4,13 @@ import { HoveredLink, MenuItem, ProductItem } from "../ui/navbar-menu";
 import Image from "next/image";
 import ThemeToggle from "../ui/theme-toggle";
 import Link from "next/link";
-import { Menu as MenuIcon, X } from "lucide-react";
+import { Menu as MenuIcon, X, LayoutDashboard } from "lucide-react";
+import {
+  SignInButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from "@clerk/nextjs";
 
 export default function Navbar() {
   const [active, setActive] = useState<string | null>(null);
@@ -106,14 +112,33 @@ export default function Navbar() {
               </MenuItem>
             </div>
 
-            {/* Desktop: Right - Login Button + Theme Toggle */}
+            {/* Desktop: Right - Auth + Theme Toggle */}
             <div className="hidden lg:flex items-center gap-4">
-              <Link 
-                href="sign-in"
-                className="px-6 py-2.5 rounded-lg font-medium text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-              >
-                Log in
-              </Link>
+              <SignedOut>
+                <Link 
+                  href="/sign-in"
+                  className="px-6 py-2.5 rounded-lg font-medium text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                  Log in
+                </Link>
+              </SignedOut>
+              <SignedIn>
+                <Link 
+                  href="/dashboard"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </Link>
+                <UserButton 
+                  afterSignOutUrl="/"
+                  appearance={{
+                    elements: {
+                      avatarBox: "w-9 h-9"
+                    }
+                  }}
+                />
+              </SignedIn>
               <ThemeToggle />
             </div>
           </div>
@@ -156,13 +181,33 @@ export default function Navbar() {
                 
                 {/* Mobile Actions */}
                 <div className="flex items-center justify-between pt-2">
-                  <Link 
-                    href="/sign-in"
-                    className="px-6 py-2.5 rounded-lg font-medium bg-indigo-500 text-white hover:bg-indigo-600 transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Log in
-                  </Link>
+                  <SignedOut>
+                    <Link 
+                      href="/sign-in"
+                      className="px-6 py-2.5 rounded-lg font-medium bg-indigo-500 text-white hover:bg-indigo-600 transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Log in
+                    </Link>
+                  </SignedOut>
+                  <SignedIn>
+                    <Link 
+                      href="/dashboard"
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium bg-indigo-500 text-white hover:bg-indigo-600 transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <LayoutDashboard className="w-4 h-4" />
+                      Dashboard
+                    </Link>
+                    <UserButton 
+                      afterSignOutUrl="/"
+                      appearance={{
+                        elements: {
+                          avatarBox: "w-12 h-12"
+                        }
+                      }}
+                    />
+                  </SignedIn>
                   <ThemeToggle />
                 </div>
               </div>
