@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import { LampContainer } from "../ui/lamp";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -8,13 +8,31 @@ import { ArrowRight } from "lucide-react";
 export default function Hero() {
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const handleVideoLoad = () => {
-    if (videoRef.current) {
-      videoRef.current.play().catch(() => {
-        // Autoplay was prevented
-      });
-    }
-  };
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (videoRef.current) {
+
+        videoRef.current.currentTime = 0;
+
+        const playPromise = videoRef.current.play();
+
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+
+              console.log("Video is playing");
+            })
+            .catch((error) => {
+
+              console.log("Video autoplay prevented:", error);
+            });
+        }
+      }
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, []);
+
 
   return (
     <div>
@@ -40,7 +58,7 @@ export default function Hero() {
 
             {/* Subheadline */}
             <p className="text-zinc-600 dark:text-slate-400 text-center lg:text-left text-base sm:text-lg md:text-xl max-w-xl">
-              Streamline your workflow with powerful task management, 
+              Streamline your workflow with powerful task management,
               team collaboration, and intelligent automation. Built for modern teams.
             </p>
 
@@ -78,10 +96,10 @@ export default function Hero() {
             <div className="relative rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-lg bg-zinc-100 dark:bg-zinc-900">
               <video
                 ref={videoRef}
-                onLoadedData={handleVideoLoad}
                 autoPlay
                 muted
                 playsInline
+                preload="auto"
                 className="w-full h-auto object-cover"
               >
                 <source src="/assets/updatedhero-mobile-final.mp4" type="video/mp4" />

@@ -15,17 +15,17 @@ import {
 export default function Navbar() {
   const [active, setActive] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
+
   return (
     <div className="relative w-full flex items-center justify-center">
       <div className="fixed top-0 inset-x-0 max-w-7xl mx-auto z-100 px-4">
         {/* Rounded Navbar Container */}
-        <nav 
+        <nav
           className="relative rounded-full border border-slate-200 dark:border-white/20 bg-slate-50/90 dark:bg-black backdrop-blur-lg shadow-lg"
           onMouseLeave={() => setActive(null)}
         >
           <div className="flex items-center justify-between px-8 py-6">
-            
+
             {/* Left: Logo + Axon */}
             <Link href="/" className="flex items-center gap-1 hover:opacity-80 transition-opacity">
               <Image
@@ -113,9 +113,9 @@ export default function Navbar() {
             </div>
 
             {/* Desktop: Right - Auth + Theme Toggle */}
-            <div className="hidden lg:flex items-center gap-4">
+            <div className="hidden lg:flex items-center gap-4" suppressHydrationWarning>
               <SignedOut>
-                <Link 
+                <Link
                   href="/sign-in"
                   className="px-6 py-2.5 rounded-lg font-medium text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                 >
@@ -123,14 +123,14 @@ export default function Navbar() {
                 </Link>
               </SignedOut>
               <SignedIn>
-                <Link 
+                <Link
                   href="/dashboard"
                   className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                 >
                   <LayoutDashboard className="w-4 h-4" />
                   Dashboard
                 </Link>
-                <UserButton 
+                <UserButton
                   afterSignOutUrl="/"
                   appearance={{
                     elements: {
@@ -148,41 +148,41 @@ export default function Navbar() {
             <div className="lg:hidden absolute top-full left-0 right-0 mt-2 bg-white dark:bg-black rounded-3xl border border-zinc-200 dark:border-white/20 shadow-xl p-6">
               <div className="flex flex-col space-y-4">
                 {/* Mobile Menu Items */}
-                <Link 
-                  href="/boards" 
+                <Link
+                  href="/boards"
                   className="text-zinc-900 dark:text-white hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Features
                 </Link>
-                <Link 
-                  href="/solutions" 
+                <Link
+                  href="/solutions"
                   className="text-zinc-900 dark:text-white hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Solutions
                 </Link>
-                <Link 
-                  href="/docs" 
+                <Link
+                  href="/docs"
                   className="text-zinc-900 dark:text-white hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Resources
                 </Link>
-                <Link 
-                  href="/pricing" 
+                <Link
+                  href="/pricing"
                   className="text-zinc-900 dark:text-white hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Pricing
                 </Link>
-                
+
                 <div className="h-px bg-zinc-200 dark:bg-zinc-700 my-2" />
-                
+
                 {/* Mobile Actions */}
-                <div className="flex items-center justify-between pt-2">
+                <div className="flex items-center justify-between pt-2" suppressHydrationWarning>
                   <SignedOut>
-                    <Link 
+                    <Link
                       href="/sign-in"
                       className="px-6 py-2.5 rounded-lg font-medium bg-indigo-500 text-white hover:bg-indigo-600 transition-colors"
                       onClick={() => setMobileMenuOpen(false)}
@@ -191,7 +191,7 @@ export default function Navbar() {
                     </Link>
                   </SignedOut>
                   <SignedIn>
-                    <Link 
+                    <Link
                       href="/dashboard"
                       className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium bg-indigo-500 text-white hover:bg-indigo-600 transition-colors"
                       onClick={() => setMobileMenuOpen(false)}
@@ -199,7 +199,7 @@ export default function Navbar() {
                       <LayoutDashboard className="w-4 h-4" />
                       Dashboard
                     </Link>
-                    <UserButton 
+                    <UserButton
                       afterSignOutUrl="/"
                       appearance={{
                         elements: {
