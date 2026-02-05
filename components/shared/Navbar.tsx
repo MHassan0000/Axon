@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { HoveredLink, MenuItem, ProductItem } from "../ui/navbar-menu";
 import Image from "next/image";
 import ThemeToggle from "../ui/theme-toggle";
@@ -15,6 +15,11 @@ import {
 export default function Navbar() {
   const [active, setActive] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className="relative w-full flex items-center justify-center">
@@ -113,32 +118,36 @@ export default function Navbar() {
             </div>
 
             {/* Desktop: Right - Auth + Theme Toggle */}
-            <div className="hidden lg:flex items-center gap-4" suppressHydrationWarning>
-              <SignedOut>
-                <Link
-                  href="/sign-in"
-                  className="px-6 py-2.5 rounded-lg font-medium text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                >
-                  Log in
-                </Link>
-              </SignedOut>
-              <SignedIn>
-                <Link
-                  href="/dashboard"
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  Dashboard
-                </Link>
-                <UserButton
-                  afterSignOutUrl="/"
-                  appearance={{
-                    elements: {
-                      avatarBox: "w-9 h-9"
-                    }
-                  }}
-                />
-              </SignedIn>
+            <div className="hidden lg:flex items-center gap-4">
+              {mounted && (
+                <>
+                  <SignedOut>
+                    <Link
+                      href="/sign-in"
+                      className="px-6 py-2.5 rounded-lg font-medium text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    >
+                      Log in
+                    </Link>
+                  </SignedOut>
+                  <SignedIn>
+                    <Link
+                      href="/dashboard"
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    >
+                      <LayoutDashboard className="w-4 h-4" />
+                      Dashboard
+                    </Link>
+                    <UserButton
+                      afterSignOutUrl="/"
+                      appearance={{
+                        elements: {
+                          avatarBox: "w-9 h-9"
+                        }
+                      }}
+                    />
+                  </SignedIn>
+                </>
+              )}
               <ThemeToggle />
             </div>
           </div>
@@ -180,34 +189,38 @@ export default function Navbar() {
                 <div className="h-px bg-zinc-200 dark:bg-zinc-700 my-2" />
 
                 {/* Mobile Actions */}
-                <div className="flex items-center justify-between pt-2" suppressHydrationWarning>
-                  <SignedOut>
-                    <Link
-                      href="/sign-in"
-                      className="px-6 py-2.5 rounded-lg font-medium bg-indigo-500 text-white hover:bg-indigo-600 transition-colors"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Log in
-                    </Link>
-                  </SignedOut>
-                  <SignedIn>
-                    <Link
-                      href="/dashboard"
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium bg-indigo-500 text-white hover:bg-indigo-600 transition-colors"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <LayoutDashboard className="w-4 h-4" />
-                      Dashboard
-                    </Link>
-                    <UserButton
-                      afterSignOutUrl="/"
-                      appearance={{
-                        elements: {
-                          avatarBox: "w-12 h-12"
-                        }
-                      }}
-                    />
-                  </SignedIn>
+                <div className="flex items-center justify-between pt-2">
+                  {mounted && (
+                    <>
+                      <SignedOut>
+                        <Link
+                          href="/sign-in"
+                          className="px-6 py-2.5 rounded-lg font-medium bg-indigo-500 text-white hover:bg-indigo-600 transition-colors"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          Log in
+                        </Link>
+                      </SignedOut>
+                      <SignedIn>
+                        <Link
+                          href="/dashboard"
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium bg-indigo-500 text-white hover:bg-indigo-600 transition-colors"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <LayoutDashboard className="w-4 h-4" />
+                          Dashboard
+                        </Link>
+                        <UserButton
+                          afterSignOutUrl="/"
+                          appearance={{
+                            elements: {
+                              avatarBox: "w-12 h-12"
+                            }
+                          }}
+                        />
+                      </SignedIn>
+                    </>
+                  )}
                   <ThemeToggle />
                 </div>
               </div>
