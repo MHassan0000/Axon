@@ -3,33 +3,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
-
-const steps = [
-  {
-    iconPath: "/icons/kanban-svgrepo-com.svg",
-    title: "Create Your Board",
-    description: "Start with a blank canvas or choose from templates",
-
-  },
-  {
-    iconPath: "/icons/task-collection-svgrepo-com.svg",
-    title: "Add Tasks",
-    description: "Drag, drop, and organize your workflow visually",
-
-  },
-  {
-    iconPath: "/icons/in-progress-svgrepo-com.svg",
-    title: "Track Progress",
-    description: "Watch your tasks move from idea to completion",
-
-  },
-  {
-    iconPath: "/icons/collaboration-team-svgrepo-com.svg",
-    title: "Collaborate",
-    description: "Share boards and work together in real-time",
-
-  },
-];
+import { howItWorksSteps } from "@/constants/homepage";
 
 export default function HowItWorks() {
   return (
@@ -59,7 +33,7 @@ export default function HowItWorks() {
 
         {/* Steps Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-          {steps.map((step, index) => (
+          {howItWorksSteps.map((step, index) => (
             <motion.div
               key={step.title}
               initial={{ opacity: 0, y: 30 }}
@@ -101,8 +75,8 @@ export default function HowItWorks() {
                 </p>
               </div>
 
-              {/* Arrow Connector (desktop only, not on last item) */}
-              {index < steps.length - 1 && (
+              {/* Connector Line (desktop only) */}
+              {index < howItWorksSteps.length - 1 && (
                 <div className="hidden lg:block absolute top-1/2 -right-4 transform -translate-y-1/2 z-20">
                   <ArrowRight className="w-6 h-6 text-zinc-300 dark:text-zinc-700" />
                 </div>

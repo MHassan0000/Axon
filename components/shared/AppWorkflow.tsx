@@ -2,26 +2,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { Mail, MessageSquare } from "lucide-react";
-
-const workflows = [
-    {
-        icon: Mail,
-        title: "From message to action",
-        description: "Quickly turn communication from your favorite apps into to-dos, keeping all your discussions and tasks organized in one place.",
-        image: "/images/email-todos.webp",
-        imageAlt: "Email to tasks workflow demonstration",
-        reverse: false,
-    },
-    {
-        icon: MessageSquare,
-        title: "Message App Sorcery",
-        description: "Need to follow up on a message from Slack or Microsoft Teams? Send it directly to your board! Your favorite app interface lets you save messages that appear in your Inbox with AI-generated summaries and links.",
-        image: "/images/slackteams-to-inbox.webp",
-        imageAlt: "Slack and Teams to inbox workflow",
-        reverse: true,
-    },
-];
+import { workflows } from "@/constants/homepage";
 
 export default function AppWorkflow() {
     return (

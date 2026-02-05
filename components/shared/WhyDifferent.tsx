@@ -1,25 +1,7 @@
 "use client";
 import React from "react";
 import { motion } from "framer-motion";
-import { X, Focus, Zap } from "lucide-react";
-
-const values = [
-  {
-    icon: Zap,
-    title: "Speed First",
-    description: "Every interaction is instant. No loading spinners, no delays.",
-  },
-  {
-    icon: Focus,
-    title: "Clarity Over Clutter",
-    description: "Only what matters. We removed everything that gets in your way.",
-  },
-  {
-    icon: X,
-    title: "No Feature Bloat",
-    description: "Built to solve one problem exceptionally well, not everything poorly.",
-  },
-];
+import { whyDifferentValues } from "@/constants/homepage";
 
 export default function WhyDifferent() {
   return (
@@ -51,7 +33,7 @@ export default function WhyDifferent() {
 
           {/* Right Side - Value Cards */}
           <div className="space-y-4">
-            {values.map((value, index) => (
+            {whyDifferentValues.map((value, index) => (
               <motion.div
                 key={value.title}
                 initial={{ opacity: 0, x: 30 }}

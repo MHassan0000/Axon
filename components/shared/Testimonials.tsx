@@ -2,39 +2,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { SiStripe, SiNotion, SiSlack, SiZoom, SiFigma } from "react-icons/si";
-
-const testimonials = [
-    {
-        quote: "Axon is great for simplifying complex processes. As a manager, I can chunk processes down into bite-sized pieces for my team and then delegate that out, but still keep a bird's-eye view.",
-        author: "Sarah Mitchell",
-        role: "Product Manager",
-        company: "TechFlow",
-        stat: "75% of organizations report that Axon delivers value to their business within 30 days.",
-    },
-    {
-        quote: "Whether someone is in the office, working from home, or working on-site with a client, everyone can share context and information through Axon.",
-        author: "Marcus Chen",
-        role: "Engineering Lead",
-        company: "DataWorks",
-        stat: "81% of customers chose Axon for its ease of use.",
-    },
-    {
-        quote: "We used Axon to provide clarity on steps, requirements, and procedures. This was exceptional when communicating with teams that had deep cultural and language differences.",
-        author: "Jennifer Kowalski",
-        role: "Operations Director",
-        company: "GlobalTech",
-        stat: "74% of customers say Axon has improved communication with their co-workers and teams.",
-    },
-];
-
-const companyLogos = [
-    { name: "Stripe", icon: SiStripe },
-    { name: "Notion", icon: SiNotion },
-    { name: "Slack", icon: SiSlack },
-    { name: "Zoom", icon: SiZoom },
-    { name: "Figma", icon: SiFigma },
-];
+import { testimonials, companyLogos } from "@/constants/homepage";
 
 export default function Testimonials() {
     const [currentIndex, setCurrentIndex] = useState(0);

@@ -2,39 +2,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
-
-const features = [
-  {
-    title: "Drag & Drop Boards",
-    description: "Organize tasks visually with intuitive drag and drop. No friction, just flow.",
-    image: "/icons/Project_management.png",
-  },
-  {
-    title: "Real-Time Updates",
-    description: "See changes instantly. No refresh needed. Everyone stays in sync automatically.",
-    image: "/icons/lightning-svgrepo-com.svg",
-  },
-  {
-    title: "Keyboard Shortcuts",
-    description: "Power users move fast. Every action is accessible without touching the mouse.",
-    image: "/icons/keyboard-svgrepo-com.svg",
-  },
-  {
-    title: "Clean Dark Mode",
-    description: "Designed dark-first. Easy on the eyes during long work sessions.",
-    image: "/icons/kanban-svgrepo-com.svg",
-  },
-  {
-    title: "Seamless Collaboration",
-    description: "Work together without friction. Real-time presence and instant updates.",
-    image: "/icons/Integration.png",
-  },
-  {
-    title: "Performance & Speed",
-    description: "Built for speed. Optimized to handle thousands of tasks without lag.",
-    image: "/icons/settings.png",
-  },
-];
+import { coreFeatures } from "@/constants/homepage";
 
 export default function CoreFeatures() {
   return (
@@ -73,7 +41,7 @@ export default function CoreFeatures() {
 
         {/* Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-          {features.map((feature, index) => (
+          {coreFeatures.map((feature, index) => (
             <motion.div
               key={feature.title}
               initial={{ opacity: 0, y: 30 }}

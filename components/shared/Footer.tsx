@@ -1,44 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { Github, Twitter, Linkedin, Mail } from "lucide-react";
-
-const footerLinks = {
-    product: {
-        title: "Product",
-        links: [
-            { name: "Features", href: "#features" },
-            { name: "Pricing", href: "/pricing" },
-            { name: "Updates", href: "/updates" },
-            { name: "Beta", href: "/beta" },
-        ],
-    },
-    resources: {
-        title: "Resources",
-        links: [
-            { name: "Documentation", href: "/docs" },
-            { name: "Help Center", href: "/help" },
-            { name: "Community", href: "/community" },
-            { name: "Contact", href: "/contact" },
-        ],
-    },
-    company: {
-        title: "Company",
-        links: [
-            { name: "About", href: "/about" },
-            { name: "Blog", href: "/blog" },
-            { name: "Careers", href: "/careers" },
-            { name: "Press", href: "/press" },
-        ],
-    },
-};
-
-const socialLinks = [
-    { name: "Twitter", icon: Twitter, href: "https://twitter.com" },
-    { name: "Github", icon: Github, href: "https://github.com" },
-    { name: "LinkedIn", icon: Linkedin, href: "https://linkedin.com" },
-    { name: "Email", icon: Mail, href: "mailto:hello@axon.com" },
-];
+import { footerLinks, socialLinks } from "@/constants/homepage";
 
 export default function Footer() {
     return (
@@ -140,7 +103,7 @@ export default function Footer() {
                             Terms
                         </Link>
                         <span className="text-zinc-600">
-                            © {new Date().getFullYear()} Axon
+                            © 2026 Axon
                         </span>
                     </div>
 

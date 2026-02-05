@@ -14,8 +14,8 @@ export default function Home() {
       <section className="flex flex-col gap-20">
         <Navbar />
         <Hero />
+        <AppWorkflow />
       </section>
-      <AppWorkflow />
       <HowItWorks />
       <CoreFeatures />
       <WhyDifferent />
