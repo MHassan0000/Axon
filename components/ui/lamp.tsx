@@ -112,7 +112,7 @@ export const LampContainer = ({
       </div>
 
       {/* Content - positioned below lamp effect */}
-      <div className="relative z-50 flex flex-col items-center px-5 mt-20">
+      <div className="relative z-50 flex flex-col items-center w-full px-5 mt-20">
         {children}
       </div>
     </div>
