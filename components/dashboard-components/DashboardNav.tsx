@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Search,
     Bell,
     Plus,
     Command,
-
+    Sun,
+    Moon,
 } from "lucide-react";
 import Image from "next/image";
 import { UserButton } from "@clerk/nextjs";
@@ -14,12 +15,35 @@ import Link from "next/link";
 
 export default function DashboardNav() {
     const [searchValue, setSearchValue] = useState("");
+    const [isDark, setIsDark] = useState(true);
+
+    // Initialize theme from localStorage
+    useEffect(() => {
+        const theme = localStorage.getItem("theme") || "dark";
+        setIsDark(theme === "dark");
+        if (theme === "dark") {
+            document.documentElement.classList.add("dark");
+        } else {
+            document.documentElement.classList.remove("dark");
+        }
+    }, []);
+
+    // Toggle theme
+    const toggleTheme = () => {
+        const newTheme = isDark ? "light" : "dark";
+        setIsDark(!isDark);
+        localStorage.setItem("theme", newTheme);
+        if (newTheme === "dark") {
+            document.documentElement.classList.add("dark");
+        } else {
+            document.documentElement.classList.remove("dark");
+        }
+    };
 
     return (
-        <header className="sticky top-0 z-50 h-14 bg-zinc-950 border-b border-zinc-800/80 px-4">
+        <header className="sticky top-0 z-50 h-14 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800/80 px-4 transition-colors duration-200">
             <div className="flex items-center justify-between h-full gap-4">
                 {/* Left Section - Logo */}
-
                 <div className="flex items-center gap-3">
                     {/* Logo */}
                     <Link href="/">
@@ -29,19 +53,19 @@ export default function DashboardNav() {
                                 alt="Axon"
                                 width={35}
                                 height={35}
-                                className="object-contain"
+                                className="object-contain dark:invert-0"
                             />
-                            <span className="text-lg font-semibold text-zinc-100 tracking-tight">
+                            <span className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
                                 Axon
                             </span>
                         </div>
                     </Link>
 
                     {/* Divider */}
-                    <div className="h-5 w-px bg-zinc-800 hidden md:block" />
+                    <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 hidden md:block" />
 
                     {/* Create Button */}
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-black hover:bg-zinc-200 rounded-lg transition-colors font-medium">
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-black hover:bg-zinc-700 dark:hover:bg-zinc-200 rounded-lg transition-colors font-medium">
                         <Plus className="w-4 h-4" />
                         <span className="text-sm hidden sm:block">Create</span>
                     </button>
@@ -50,16 +74,16 @@ export default function DashboardNav() {
                 {/* Center Section - Search */}
                 <div className="flex-1 max-w-md mx-4 hidden sm:block">
                     <div className="relative group">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-zinc-400 transition-colors" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 group-focus-within:text-zinc-600 dark:group-focus-within:text-zinc-400 transition-colors" />
                         <input
                             type="text"
                             placeholder="Search..."
                             value={searchValue}
                             onChange={(e) => setSearchValue(e.target.value)}
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-12 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-700 transition-all"
+                            className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg pl-10 pr-12 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-300 dark:focus:ring-zinc-700 focus:border-zinc-300 dark:focus:border-zinc-700 transition-all"
                         />
                         {/* Keyboard shortcut hint */}
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-zinc-600">
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-zinc-400 dark:text-zinc-600">
                             <Command className="w-3 h-3" />
                             <span className="text-xs">K</span>
                         </div>
@@ -69,19 +93,32 @@ export default function DashboardNav() {
                 {/* Right Section - Actions & User */}
                 <div className="flex items-center gap-2">
                     {/* Mobile Search */}
-                    <button className="sm:hidden p-2 rounded-lg hover:bg-zinc-800 transition-colors">
-                        <Search className="w-5 h-5 text-zinc-400" />
+                    <button className="sm:hidden p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                        <Search className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+                    </button>
+
+                    {/* Theme Toggle */}
+                    <button
+                        onClick={toggleTheme}
+                        className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group"
+                        title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+                    >
+                        {isDark ? (
+                            <Sun className="w-5 h-5 text-zinc-400 group-hover:text-zinc-300 transition-colors" />
+                        ) : (
+                            <Moon className="w-5 h-5 text-zinc-500 group-hover:text-zinc-700 transition-colors" />
+                        )}
                     </button>
 
                     {/* Notifications */}
-                    <button className="relative p-2 rounded-lg hover:bg-zinc-800 transition-colors group">
-                        <Bell className="w-5 h-5 text-zinc-400 group-hover:text-zinc-300 transition-colors" />
+                    <button className="relative p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group">
+                        <Bell className="w-5 h-5 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition-colors" />
                         {/* Notification dot */}
-                        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-white rounded-full" />
+                        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-zinc-900 dark:bg-white rounded-full" />
                     </button>
 
                     {/* Divider */}
-                    <div className="h-6 w-px bg-zinc-800 mx-1" />
+                    <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-800 mx-1" />
 
                     {/* User Avatar */}
                     <UserButton
