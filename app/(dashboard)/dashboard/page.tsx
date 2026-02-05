@@ -25,7 +25,7 @@ export default function DashboardPage() {
             {/* Main Content Area */}
             <div className="flex-1 overflow-auto p-6">
                 {/* Empty State */}
-                <div className="flex flex-col items-center justify-center h-full min-h-[400px]">
+                <div className="flex flex-col items-center justify-center h-full min-h-100">
                     {/* Icon Container */}
                     <div className="relative mb-6">
                         <div className="w-20 h-20 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">

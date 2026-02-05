@@ -77,7 +77,7 @@ export default function Sidebar() {
                     fixed lg:relative z-50 lg:z-auto
                     flex flex-col bg-zinc-950 border-r border-zinc-800/80
                     h-full transition-all duration-300 ease-out
-                    ${isCollapsed ? "lg:w-[72px]" : "lg:w-64"}
+                    ${isCollapsed ? "lg:w-18" : "lg:w-64"}
                     ${isMobileOpen ? "translate-x-0 w-72" : "-translate-x-full lg:translate-x-0"}
                 `}
             >
