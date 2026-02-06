@@ -7,38 +7,8 @@ import {
     Book,
     MessageCircle,
     ExternalLink,
-    Command,
-    ArrowUp,
-    ArrowDown,
-    CornerDownLeft,
 } from "lucide-react";
-
-const shortcuts = [
-    { keys: ["⌘", "K"], description: "Open global search" },
-    { keys: ["⌘", "N"], description: "Create new card" },
-    { keys: ["Escape"], description: "Close modal" },
-    { keys: ["↑", "↓"], description: "Navigate search results" },
-    { keys: ["Enter"], description: "Select item" },
-];
-
-const faqItems = [
-    {
-        question: "How do I create a new board?",
-        answer: "Navigate to a workspace and click the 'New Board' button, or use the Create menu in the navigation bar.",
-    },
-    {
-        question: "How do I invite team members?",
-        answer: "Go to Workspace Settings and use the Members tab to search and add users to your workspace.",
-    },
-    {
-        question: "Can I move cards between lists?",
-        answer: "Yes! Simply drag and drop cards between lists to move them. You can also drag to reorder within the same list.",
-    },
-    {
-        question: "How do I set a due date?",
-        answer: "Click on a card to open the card modal, then use the Due Date section to set or change the due date.",
-    },
-];
+import { keyboardShortcuts, faqItems, appVersion } from "@/constants/homepage";
 
 export default function HelpPage() {
     return (
@@ -69,7 +39,7 @@ export default function HelpPage() {
                         </h2>
 
                         <div className="space-y-3">
-                            {shortcuts.map((shortcut, index) => (
+                            {keyboardShortcuts.map((shortcut, index) => (
                                 <div
                                     key={index}
                                     className="flex items-center justify-between py-2 px-3 bg-white dark:bg-zinc-800/50 rounded-lg"
@@ -140,7 +110,7 @@ export default function HelpPage() {
 
                     {/* Version Info */}
                     <div className="text-center text-xs text-zinc-400 dark:text-zinc-500">
-                        Axon v1.0.0 • Built with ❤️
+                        Axon v{appVersion}
                     </div>
                 </div>
             </div>

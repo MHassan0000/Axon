@@ -1,5 +1,38 @@
-import { Mail, MessageSquare, Github, Twitter, Linkedin, X, Focus, Zap } from "lucide-react";
+import { Mail, MessageSquare, Github, Twitter, Linkedin, X, Focus, Zap, Users, CheckCircle2 } from "lucide-react";
 import { SiStripe, SiNotion, SiSlack, SiZoom, SiFigma } from "react-icons/si";
+
+// Social Proof Stats
+export const socialProofStats = [
+  {
+    icon: Users,
+    value: "50K+",
+    label: "Active Users",
+  },
+  {
+    icon: CheckCircle2,
+    value: "2M+",
+    label: "Tasks Completed",
+  },
+  {
+    icon: Zap,
+    value: "100K+",
+    label: "Boards Created",
+  },
+];
+
+// Social Proof Testimonials (shorter quotes for the social proof section)
+export const socialProofTestimonials = [
+  {
+    quote: "Finally, a productivity tool that doesn't get in the way.",
+    author: "Sarah Chen",
+    role: "Product Manager",
+  },
+  {
+    quote: "Our team's efficiency increased by 40% in the first month.",
+    author: "Marcus Rivera",
+    role: "Engineering Lead",
+  },
+];
 
 // App Workflow Section
 export const workflows = [
@@ -168,3 +201,33 @@ export const socialLinks = [
   { name: "LinkedIn", icon: Linkedin, href: "https://linkedin.com" },
   { name: "Email", icon: Mail, href: "mailto:hello@axon.com" },
 ];
+
+// Help Page Data
+export const keyboardShortcuts = [
+  { keys: ["Cmd/Ctrl", "K"], description: "Open global search" },
+  { keys: ["Cmd/Ctrl", "N"], description: "Create new card" },
+  { keys: ["Escape"], description: "Close modal" },
+  { keys: ["Arrow Up", "Arrow Down"], description: "Navigate search results" },
+  { keys: ["Enter"], description: "Select item" },
+];
+
+export const faqItems = [
+  {
+    question: "How do I create a new board?",
+    answer: "Navigate to a workspace and click the 'New Board' button, or use the Create menu in the navigation bar.",
+  },
+  {
+    question: "How do I invite team members?",
+    answer: "Go to Workspace Settings and use the Members tab to search and add users to your workspace.",
+  },
+  {
+    question: "Can I move cards between lists?",
+    answer: "Yes! Simply drag and drop cards between lists to move them. You can also drag to reorder within the same list.",
+  },
+  {
+    question: "How do I set a due date?",
+    answer: "Click on a card to open the card modal, then use the Due Date section to set or change the due date.",
+  },
+];
+
+export const appVersion = "1.0.0";

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "./users";
+import { verifyBoardAccess, verifyListAccess } from "./helpers";
 import type { 
   List, 
   CreateListInput,
@@ -16,6 +17,13 @@ export async function createList(input: CreateListInput): Promise<List | null> {
   
   if (!user) {
     console.error("User not authenticated");
+    return null;
+  }
+
+  // Verify user has access to this board's workspace
+  const access = await verifyBoardAccess(input.board_id);
+  if (!access.allowed) {
+    console.error("User does not have access to this board");
     return null;
   }
 
@@ -58,6 +66,13 @@ export async function updateList(
   listId: string,
   input: UpdateListInput
 ): Promise<List | null> {
+  // Verify user has access to this list
+  const access = await verifyListAccess(listId);
+  if (!access.allowed) {
+    console.error("User does not have access to this list");
+    return null;
+  }
+
   const supabase = await createClient();
 
   const { data: list, error } = await supabase
@@ -79,6 +94,13 @@ export async function updateList(
  * Delete a list
  */
 export async function deleteList(listId: string): Promise<boolean> {
+  // Verify user has access to this list
+  const access = await verifyListAccess(listId);
+  if (!access.allowed) {
+    console.error("User does not have access to this list");
+    return false;
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -101,6 +123,13 @@ export async function reorderLists(
   boardId: string,
   listIds: string[]
 ): Promise<boolean> {
+  // Verify user has access to this board
+  const access = await verifyBoardAccess(boardId);
+  if (!access.allowed) {
+    console.error("User does not have access to this board");
+    return false;
+  }
+
   const supabase = await createClient();
 
   // Update each list's position
@@ -128,6 +157,13 @@ export async function copyList(
   listId: string,
   newName?: string
 ): Promise<List | null> {
+  // Verify user has access to this list
+  const access = await verifyListAccess(listId);
+  if (!access.allowed) {
+    console.error("User does not have access to this list");
+    return null;
+  }
+
   const supabase = await createClient();
 
   // Get the original list

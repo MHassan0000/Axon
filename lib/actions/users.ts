@@ -101,8 +101,17 @@ export async function getCurrentUser(): Promise<User | null> {
 
 /**
  * Search users by name or email (for assigning to cards)
+ * Requires authentication to prevent data disclosure
  */
 export async function searchUsers(query: string, limit = 10): Promise<User[]> {
+  // Require authentication to search users
+  const clerkUser = await currentUser();
+  
+  if (!clerkUser) {
+    console.error("User not authenticated");
+    return [];
+  }
+
   const supabase = await createClient();
 
   const { data: users, error } = await supabase

@@ -339,7 +339,27 @@ export async function removeWorkspaceMember(
 export async function getWorkspaceMembers(
   workspaceId: string
 ): Promise<{ id: string; name: string | null; email: string; avatar_url: string | null; role: string }[]> {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    console.error("User not authenticated");
+    return [];
+  }
+
   const supabase = await createClient();
+
+  // Verify user is a member of this workspace
+  const { data: membership } = await supabase
+    .from("workspace_members")
+    .select("role")
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!membership) {
+    console.error("User is not a member of this workspace");
+    return [];
+  }
 
   const { data: members, error } = await supabase
     .from("workspace_members")

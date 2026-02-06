@@ -78,3 +78,13 @@ export {
   getCardActivity,
   getBoardActivity,
 } from "./activity";
+
+// Authorization helpers
+export {
+  verifyWorkspaceAccess,
+  verifyBoardAccess,
+  verifyListAccess,
+  verifyCardAccess,
+  verifyChecklistAccess,
+  verifyChecklistItemAccess,
+} from "./helpers";

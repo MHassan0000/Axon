@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import {
     FolderKanban,
     Plus,
@@ -16,6 +16,38 @@ import { useWorkspaces } from "@/lib/context/WorkspaceContext";
 import { workspaceNameSchema, boardNameSchema, boardColorSchema } from "@/lib/validations";
 import type { Board, Workspace } from "@/lib/types/database";
 
+// Component to handle search params
+function SearchParamsHandler({
+    workspaces,
+    onCreateWorkspace,
+    onCreateBoard,
+}: {
+    workspaces: Workspace[];
+    onCreateWorkspace: () => void;
+    onCreateBoard: (workspaceId: string) => void;
+}) {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
+    useEffect(() => {
+        const createType = searchParams.get("create");
+        if (createType === "workspace") {
+            onCreateWorkspace();
+            router.replace("/dashboard", { scroll: false });
+        } else if (createType === "board") {
+            if (workspaces.length > 0) {
+                onCreateBoard(workspaces[0].id);
+            } else {
+                toast.error("Create a workspace first before adding a board");
+                onCreateWorkspace();
+            }
+            router.replace("/dashboard", { scroll: false });
+        }
+    }, [searchParams, router, workspaces, onCreateWorkspace, onCreateBoard]);
+
+    return null;
+}
+
 export default function DashboardPage() {
     const { workspaces, loading: loadingWorkspaces, addWorkspace } = useWorkspaces();
     const [boards, setBoards] = useState<Board[]>([]);
@@ -28,27 +60,16 @@ export default function DashboardPage() {
     const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
     const [newBoardColor, setNewBoardColor] = useState("#3b82f6");
 
-    const searchParams = useSearchParams();
     const router = useRouter();
 
-    // Handle URL query params for create actions
-    useEffect(() => {
-        const createType = searchParams.get("create");
-        if (createType === "workspace") {
-            setShowCreateWorkspaceModal(true);
-            // Clear the query param
-            router.replace("/dashboard", { scroll: false });
-        } else if (createType === "board") {
-            if (workspaces.length > 0) {
-                setSelectedWorkspaceId(workspaces[0].id);
-                setShowCreateBoardModal(true);
-            } else {
-                toast.error("Create a workspace first before adding a board");
-                setShowCreateWorkspaceModal(true);
-            }
-            router.replace("/dashboard", { scroll: false });
-        }
-    }, [searchParams, router, workspaces]);
+    const handleOpenCreateWorkspace = React.useCallback(() => {
+        setShowCreateWorkspaceModal(true);
+    }, []);
+
+    const handleOpenCreateBoard = React.useCallback((workspaceId: string) => {
+        setSelectedWorkspaceId(workspaceId);
+        setShowCreateBoardModal(true);
+    }, []);
 
     // Sync user and fetch boards on mount
     useEffect(() => {
@@ -160,6 +181,15 @@ export default function DashboardPage() {
 
     return (
         <div className="flex flex-col h-full bg-white dark:bg-black transition-colors duration-200">
+            {/* Handle search params in Suspense boundary */}
+            <Suspense fallback={null}>
+                <SearchParamsHandler
+                    workspaces={workspaces}
+                    onCreateWorkspace={handleOpenCreateWorkspace}
+                    onCreateBoard={handleOpenCreateBoard}
+                />
+            </Suspense>
+
             {/* Page Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/80">
                 <div>

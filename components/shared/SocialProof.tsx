@@ -1,38 +1,7 @@
 "use client";
 import React from "react";
 import { motion } from "framer-motion";
-import { Users, CheckCircle2, Zap } from "lucide-react";
-
-const stats = [
-  {
-    icon: Users,
-    value: "50K+",
-    label: "Active Users",
-  },
-  {
-    icon: CheckCircle2,
-    value: "2M+",
-    label: "Tasks Completed",
-  },
-  {
-    icon: Zap,
-    value: "100K+",
-    label: "Boards Created",
-  },
-];
-
-const testimonials = [
-  {
-    quote: "Finally, a productivity tool that doesn't get in the way.",
-    author: "Sarah Chen",
-    role: "Product Manager",
-  },
-  {
-    quote: "Our team's efficiency increased by 40% in the first month.",
-    author: "Marcus Rivera",
-    role: "Engineering Lead",
-  },
-];
+import { socialProofStats, socialProofTestimonials } from "@/constants/homepage";
 
 export default function SocialProof() {
   return (
@@ -40,7 +9,7 @@ export default function SocialProof() {
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 mb-16">
-          {stats.map((stat, index) => (
+          {socialProofStats.map((stat, index) => (
             <motion.div
               key={stat.label}
               initial={{ opacity: 0, y: 20 }}
@@ -70,7 +39,7 @@ export default function SocialProof() {
 
         {/* Testimonials */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-          {testimonials.map((testimonial, index) => (
+          {socialProofTestimonials.map((testimonial, index) => (
             <motion.div
               key={testimonial.author}
               initial={{ opacity: 0, y: 20 }}

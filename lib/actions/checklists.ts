@@ -1,17 +1,35 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "./users";
+import { verifyCardAccess, verifyChecklistAccess, verifyChecklistItemAccess } from "./helpers";
 import type { 
   Checklist, 
   ChecklistItem, 
   ChecklistWithItems 
 } from "@/lib/types/database";
 
-// Create a new checklist
+/**
+ * Create a new checklist
+ */
 export async function createChecklist(
   cardId: string,
   title: string = "Checklist"
 ): Promise<Checklist | null> {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    console.error("User not authenticated");
+    return null;
+  }
+
+  // Verify user has access to this card
+  const access = await verifyCardAccess(cardId);
+  if (!access.allowed) {
+    console.error("User does not have access to this card");
+    return null;
+  }
+
   const supabase = await createClient();
 
   // Get max position for new checklist
@@ -38,8 +56,17 @@ export async function createChecklist(
   return data;
 }
 
-// Get checklists for a card
+/**
+ * Get checklists for a card
+ */
 export async function getChecklists(cardId: string): Promise<ChecklistWithItems[]> {
+  // Verify user has access to this card
+  const access = await verifyCardAccess(cardId);
+  if (!access.allowed) {
+    console.error("User does not have access to this card");
+    return [];
+  }
+
   const supabase = await createClient();
 
   const { data: checklists, error } = await supabase
@@ -72,8 +99,17 @@ export async function getChecklists(cardId: string): Promise<ChecklistWithItems[
   return checklistsWithItems;
 }
 
-// Delete a checklist
+/**
+ * Delete a checklist
+ */
 export async function deleteChecklist(checklistId: string): Promise<boolean> {
+  // Verify user has access to this checklist
+  const access = await verifyChecklistAccess(checklistId);
+  if (!access.allowed) {
+    console.error("User does not have access to this checklist");
+    return false;
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -89,11 +125,20 @@ export async function deleteChecklist(checklistId: string): Promise<boolean> {
   return true;
 }
 
-// Update checklist title
+/**
+ * Update checklist title
+ */
 export async function updateChecklist(
   checklistId: string,
   title: string
 ): Promise<boolean> {
+  // Verify user has access to this checklist
+  const access = await verifyChecklistAccess(checklistId);
+  if (!access.allowed) {
+    console.error("User does not have access to this checklist");
+    return false;
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -109,11 +154,20 @@ export async function updateChecklist(
   return true;
 }
 
-// Add item to checklist
+/**
+ * Add item to checklist
+ */
 export async function addChecklistItem(
   checklistId: string,
   title: string
 ): Promise<ChecklistItem | null> {
+  // Verify user has access to this checklist
+  const access = await verifyChecklistAccess(checklistId);
+  if (!access.allowed) {
+    console.error("User does not have access to this checklist");
+    return null;
+  }
+
   const supabase = await createClient();
 
   // Get max position
@@ -140,11 +194,20 @@ export async function addChecklistItem(
   return data;
 }
 
-// Toggle checklist item completion
+/**
+ * Toggle checklist item completion
+ */
 export async function toggleChecklistItem(
   itemId: string,
   isComplete: boolean
 ): Promise<boolean> {
+  // Verify user has access to this checklist item
+  const access = await verifyChecklistItemAccess(itemId);
+  if (!access.allowed) {
+    console.error("User does not have access to this checklist item");
+    return false;
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -160,8 +223,17 @@ export async function toggleChecklistItem(
   return true;
 }
 
-// Delete checklist item
+/**
+ * Delete checklist item
+ */
 export async function deleteChecklistItem(itemId: string): Promise<boolean> {
+  // Verify user has access to this checklist item
+  const access = await verifyChecklistItemAccess(itemId);
+  if (!access.allowed) {
+    console.error("User does not have access to this checklist item");
+    return false;
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -177,11 +249,20 @@ export async function deleteChecklistItem(itemId: string): Promise<boolean> {
   return true;
 }
 
-// Update checklist item title
+/**
+ * Update checklist item title
+ */
 export async function updateChecklistItem(
   itemId: string,
   title: string
 ): Promise<boolean> {
+  // Verify user has access to this checklist item
+  const access = await verifyChecklistItemAccess(itemId);
+  if (!access.allowed) {
+    console.error("User does not have access to this checklist item");
+    return false;
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase

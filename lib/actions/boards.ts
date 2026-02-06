@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "./users";
+import { verifyWorkspaceAccess, verifyBoardAccess } from "./helpers";
 import { canCreateBoard } from "@/lib/billing";
 import type { 
   Board, 
@@ -246,6 +247,13 @@ export async function updateBoard(
     return null;
   }
 
+  // Verify user has access to this board (member or higher)
+  const access = await verifyBoardAccess(boardId);
+  if (!access.allowed) {
+    console.error("User does not have access to this board");
+    return null;
+  }
+
   const supabase = await createClient();
 
   const { data: board, error } = await supabase
@@ -273,6 +281,13 @@ export async function deleteBoard(boardId: string): Promise<boolean> {
     return false;
   }
 
+  // Verify user has admin or owner access to delete the board
+  const access = await verifyBoardAccess(boardId, "admin");
+  if (!access.allowed) {
+    console.error("User does not have permission to delete this board");
+    return false;
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -296,6 +311,13 @@ export async function createLabel(
   name: string,
   color: string
 ): Promise<Label | null> {
+  // Verify user has access to this board
+  const access = await verifyBoardAccess(boardId);
+  if (!access.allowed) {
+    console.error("User does not have access to this board");
+    return null;
+  }
+
   const supabase = await createClient();
 
   const { data: label, error } = await supabase
@@ -321,6 +343,24 @@ export async function createLabel(
  */
 export async function deleteLabel(labelId: string): Promise<boolean> {
   const supabase = await createClient();
+
+  // Get the label to find the board
+  const { data: label } = await supabase
+    .from("labels")
+    .select("board_id")
+    .eq("id", labelId)
+    .single();
+
+  if (!label) {
+    return false;
+  }
+
+  // Verify user has access to this board
+  const access = await verifyBoardAccess(label.board_id);
+  if (!access.allowed) {
+    console.error("User does not have access to this board");
+    return false;
+  }
 
   const { error } = await supabase
     .from("labels")

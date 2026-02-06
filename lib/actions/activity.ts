@@ -2,9 +2,12 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "./users";
+import { verifyCardAccess, verifyBoardAccess } from "./helpers";
 import type { ActivityLog } from "@/lib/types/database";
 
-// Log an activity
+/**
+ * Log an activity
+ */
 export async function logActivity(
   action: string,
   cardId?: string,
@@ -39,7 +42,9 @@ export async function logActivity(
   return data;
 }
 
-// Get recent activity for a user's workspaces
+/**
+ * Get recent activity for a user's workspaces
+ */
 export async function getRecentActivity(limit: number = 50): Promise<(ActivityLog & { user: { name: string; avatar_url: string } })[]> {
   const supabase = await createClient();
   const user = await getCurrentUser();
@@ -85,8 +90,17 @@ export async function getRecentActivity(limit: number = 50): Promise<(ActivityLo
   return activities || [];
 }
 
-// Get activity for a specific card
+/**
+ * Get activity for a specific card
+ */
 export async function getCardActivity(cardId: string): Promise<(ActivityLog & { user: { name: string; avatar_url: string } })[]> {
+  // Verify user has access to this card
+  const access = await verifyCardAccess(cardId);
+  if (!access.allowed) {
+    console.error("User does not have access to this card's activity");
+    return [];
+  }
+
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -106,8 +120,17 @@ export async function getCardActivity(cardId: string): Promise<(ActivityLog & { 
   return data || [];
 }
 
-// Get activity for a specific board
+/**
+ * Get activity for a specific board
+ */
 export async function getBoardActivity(boardId: string, limit: number = 20): Promise<(ActivityLog & { user: { name: string; avatar_url: string } })[]> {
+  // Verify user has access to this board
+  const access = await verifyBoardAccess(boardId);
+  if (!access.allowed) {
+    console.error("User does not have access to this board's activity");
+    return [];
+  }
+
   const supabase = await createClient();
 
   const { data, error } = await supabase

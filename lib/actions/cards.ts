@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "./users";
+import { verifyListAccess, verifyCardAccess } from "./helpers";
 import type { 
   Card, 
   CardWithRelations,
@@ -19,6 +20,13 @@ export async function createCard(input: CreateCardInput): Promise<Card | null> {
   
   if (!user) {
     console.error("User not authenticated");
+    return null;
+  }
+
+  // Verify user has access to the list's workspace
+  const access = await verifyListAccess(input.list_id);
+  if (!access.allowed) {
+    console.error("User does not have access to this list");
     return null;
   }
 
@@ -76,6 +84,13 @@ export async function createCard(input: CreateCardInput): Promise<Card | null> {
  * Get a card with all its relations
  */
 export async function getCard(cardId: string): Promise<CardWithRelations | null> {
+  // Verify user has access to this card
+  const access = await verifyCardAccess(cardId);
+  if (!access.allowed) {
+    console.error("User does not have access to this card");
+    return null;
+  }
+
   const supabase = await createClient();
 
   const { data: card, error } = await supabase
@@ -135,10 +150,23 @@ export async function updateCard(
     return null;
   }
 
+  // Verify user has access to this card
+  const access = await verifyCardAccess(cardId);
+  if (!access.allowed) {
+    console.error("User does not have access to this card");
+    return null;
+  }
+
   const supabase = await createClient();
 
-  // If moving to a different list, update position
+  // If moving to a different list, verify access to the target list
   if (input.list_id) {
+    const targetListAccess = await verifyListAccess(input.list_id);
+    if (!targetListAccess.allowed) {
+      console.error("User does not have access to the target list");
+      return null;
+    }
+
     const { data: lastCard } = await supabase
       .from("cards")
       .select("position")
@@ -169,6 +197,13 @@ export async function updateCard(
  * Delete a card
  */
 export async function deleteCard(cardId: string): Promise<boolean> {
+  // Verify user has access to this card
+  const access = await verifyCardAccess(cardId);
+  if (!access.allowed) {
+    console.error("User does not have access to delete this card");
+    return false;
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -195,6 +230,20 @@ export async function moveCard(
   const user = await getCurrentUser();
   
   if (!user) {
+    return false;
+  }
+
+  // Verify user has access to the card
+  const cardAccess = await verifyCardAccess(cardId);
+  if (!cardAccess.allowed) {
+    console.error("User does not have access to this card");
+    return false;
+  }
+
+  // Verify user has access to the target list
+  const listAccess = await verifyListAccess(toListId);
+  if (!listAccess.allowed) {
+    console.error("User does not have access to the target list");
     return false;
   }
 
@@ -249,6 +298,13 @@ export async function reorderCards(
   listId: string,
   cardIds: string[]
 ): Promise<boolean> {
+  // Verify user has access to the list
+  const access = await verifyListAccess(listId);
+  if (!access.allowed) {
+    console.error("User does not have access to this list");
+    return false;
+  }
+
   const supabase = await createClient();
 
   const updates = cardIds.map((id, index) =>
@@ -275,6 +331,13 @@ export async function addLabelToCard(
   cardId: string,
   labelId: string
 ): Promise<boolean> {
+  // Verify user has access to this card
+  const access = await verifyCardAccess(cardId);
+  if (!access.allowed) {
+    console.error("User does not have access to this card");
+    return false;
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -296,6 +359,13 @@ export async function removeLabelFromCard(
   cardId: string,
   labelId: string
 ): Promise<boolean> {
+  // Verify user has access to this card
+  const access = await verifyCardAccess(cardId);
+  if (!access.allowed) {
+    console.error("User does not have access to this card");
+    return false;
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -319,6 +389,13 @@ export async function assignUserToCard(
   cardId: string,
   userId: string
 ): Promise<boolean> {
+  // Verify user has access to this card
+  const access = await verifyCardAccess(cardId);
+  if (!access.allowed) {
+    console.error("User does not have access to this card");
+    return false;
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -328,6 +405,25 @@ export async function assignUserToCard(
   if (error) {
     console.error("Error assigning user:", error);
     return false;
+  }
+
+  // Create notification for the assigned user
+  if (access.userId && access.userId !== userId) {
+    const { data: card } = await supabase
+      .from("cards")
+      .select("title")
+      .eq("id", cardId)
+      .single();
+
+    if (card) {
+      await supabase.from("notifications").insert({
+        user_id: userId,
+        type: "card_assigned",
+        title: "You were assigned to a card",
+        message: `You were assigned to "${card.title}"`,
+        link: `/dashboard/board/${access.boardId}?card=${cardId}`,
+      });
+    }
   }
 
   return true;
@@ -340,6 +436,13 @@ export async function unassignUserFromCard(
   cardId: string,
   userId: string
 ): Promise<boolean> {
+  // Verify user has access to this card
+  const access = await verifyCardAccess(cardId);
+  if (!access.allowed) {
+    console.error("User does not have access to this card");
+    return false;
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -366,6 +469,13 @@ export async function addComment(input: CreateCommentInput): Promise<Comment | n
     return null;
   }
 
+  // Verify user has access to this card
+  const access = await verifyCardAccess(input.card_id);
+  if (!access.allowed) {
+    console.error("User does not have access to this card");
+    return null;
+  }
+
   const supabase = await createClient();
 
   const { data: comment, error } = await supabase
@@ -384,17 +494,10 @@ export async function addComment(input: CreateCommentInput): Promise<Comment | n
   }
 
   // Log activity
-  const { data: card } = await supabase
-    .from("cards")
-    .select("list_id, lists!inner(board_id)")
-    .eq("id", input.card_id)
-    .single();
-
-  if (card) {
-    const cardData = card as unknown as { list_id: string; lists: { board_id: string } };
+  if (access.boardId) {
     await supabase.from("activity_log").insert({
       card_id: input.card_id,
-      board_id: cardData.lists.board_id,
+      board_id: access.boardId,
       user_id: user.id,
       action: "commented",
       details: { preview: input.content.slice(0, 50) },
@@ -408,6 +511,13 @@ export async function addComment(input: CreateCommentInput): Promise<Comment | n
  * Get comments for a card
  */
 export async function getComments(cardId: string): Promise<(Comment & { user: { name: string; avatar_url: string } })[]> {
+  // Verify user has access to this card
+  const access = await verifyCardAccess(cardId);
+  if (!access.allowed) {
+    console.error("User does not have access to this card's comments");
+    return [];
+  }
+
   const supabase = await createClient();
 
   const { data: comments, error } = await supabase
@@ -439,12 +549,34 @@ export async function deleteComment(commentId: string): Promise<boolean> {
 
   const supabase = await createClient();
 
-  // Only allow deleting own comments
+  // Get the comment to verify access
+  const { data: comment } = await supabase
+    .from("comments")
+    .select("card_id, user_id")
+    .eq("id", commentId)
+    .single();
+
+  if (!comment) {
+    return false;
+  }
+
+  // Verify user has access to this card's workspace
+  const access = await verifyCardAccess(comment.card_id);
+  if (!access.allowed) {
+    console.error("User does not have access to this card");
+    return false;
+  }
+
+  // Only allow deleting own comments (unless admin/owner)
+  if (comment.user_id !== user.id && access.role === "member") {
+    console.error("User can only delete their own comments");
+    return false;
+  }
+
   const { error } = await supabase
     .from("comments")
     .delete()
-    .eq("id", commentId)
-    .eq("user_id", user.id);
+    .eq("id", commentId);
 
   if (error) {
     console.error("Error deleting comment:", error);
