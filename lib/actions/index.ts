@@ -88,3 +88,17 @@ export {
   verifyChecklistAccess,
   verifyChecklistItemAccess,
 } from "./helpers";
+
+// Search actions
+export {
+  globalSearch,
+  quickSearch,
+  searchInBoard,
+  searchInWorkspace,
+} from "./search";
+
+export type {
+  SearchResult,
+  SearchResultType,
+  SearchResponse,
+} from "./search";
