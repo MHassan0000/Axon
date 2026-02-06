@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "./users";
+import { canCreateWorkspace } from "@/lib/billing";
 import type { 
   Workspace, 
   WorkspaceMember, 
@@ -15,15 +16,25 @@ import type {
  */
 export async function createWorkspace(
   input: CreateWorkspaceInput
-): Promise<Workspace | null> {
+): Promise<{ workspace: Workspace | null; error?: string }> {
   const user = await getCurrentUser();
   
   if (!user) {
-    console.error("User not authenticated");
-    return null;
+    return { workspace: null, error: "User not authenticated" };
   }
 
   const supabase = await createClient();
+
+  // Check plan limits
+  const { count: workspaceCount } = await supabase
+    .from("workspaces")
+    .select("*", { count: "exact", head: true })
+    .eq("owner_id", user.id);
+
+  const canCreate = await canCreateWorkspace(workspaceCount || 0);
+  if (!canCreate.allowed) {
+    return { workspace: null, error: canCreate.reason };
+  }
 
   // Create the workspace
   const { data: workspace, error: workspaceError } = await supabase
@@ -37,12 +48,11 @@ export async function createWorkspace(
     .single();
 
   if (workspaceError) {
-    console.error("Error creating workspace:", workspaceError);
-    return null;
+    return { workspace: null, error: "Failed to create workspace" };
   }
 
   // Add owner as workspace member
-  const { error: memberError } = await supabase
+  await supabase
     .from("workspace_members")
     .insert({
       workspace_id: workspace.id,
@@ -50,11 +60,7 @@ export async function createWorkspace(
       role: "owner",
     });
 
-  if (memberError) {
-    console.error("Error adding owner as member:", memberError);
-  }
-
-  return workspace;
+  return { workspace };
 }
 
 /**

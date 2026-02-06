@@ -53,18 +53,20 @@ export default function WorkspacePage() {
 
         setCreating(true);
         try {
-            const board = await createBoard({
+            const result = await createBoard({
                 workspace_id: workspaceId,
                 name: validation.data
             });
-            if (board && workspace) {
+            if (result.board && workspace) {
                 setWorkspace({
                     ...workspace,
-                    boards: [...workspace.boards, board]
+                    boards: [...workspace.boards, result.board]
                 });
                 setNewBoardName("");
                 setShowCreateModal(false);
                 toast.success("Board created");
+            } else {
+                toast.error(result.error || "Failed to create board");
             }
         } catch {
             toast.error("Failed to create board");

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "./users";
+import { canCreateBoard } from "@/lib/billing";
 import type { 
   Board, 
   BoardWithLists,
@@ -13,12 +14,11 @@ import type {
 /**
  * Create a new board
  */
-export async function createBoard(input: CreateBoardInput): Promise<Board | null> {
+export async function createBoard(input: CreateBoardInput): Promise<{ board: Board | null; error?: string }> {
   const user = await getCurrentUser();
   
   if (!user) {
-    console.error("User not authenticated");
-    return null;
+    return { board: null, error: "User not authenticated" };
   }
 
   const supabase = await createClient();
@@ -32,8 +32,18 @@ export async function createBoard(input: CreateBoardInput): Promise<Board | null
     .single();
 
   if (!membership) {
-    console.error("User is not a member of this workspace");
-    return null;
+    return { board: null, error: "Not a member of this workspace" };
+  }
+
+  // Check plan limits - count existing boards in this workspace
+  const { count: boardCount } = await supabase
+    .from("boards")
+    .select("*", { count: "exact", head: true })
+    .eq("workspace_id", input.workspace_id);
+
+  const canCreate = await canCreateBoard(boardCount || 0);
+  if (!canCreate.allowed) {
+    return { board: null, error: canCreate.reason };
   }
 
   // Get the next position
@@ -61,8 +71,7 @@ export async function createBoard(input: CreateBoardInput): Promise<Board | null
     .single();
 
   if (error) {
-    console.error("Error creating board:", error);
-    return null;
+    return { board: null, error: "Failed to create board" };
   }
 
   // Create default labels for the board
@@ -82,7 +91,7 @@ export async function createBoard(input: CreateBoardInput): Promise<Board | null
     }))
   );
 
-  return board;
+  return { board };
 }
 
 /**

@@ -84,14 +84,14 @@ export default function DashboardPage() {
 
         setCreating(true);
         try {
-            const workspace = await createWorkspace({ name: validation.data });
-            if (workspace) {
-                addWorkspace(workspace);
+            const result = await createWorkspace({ name: validation.data });
+            if (result.workspace) {
+                addWorkspace(result.workspace);
                 setNewWorkspaceName("");
                 setShowCreateWorkspaceModal(false);
                 toast.success("Workspace created successfully");
             } else {
-                toast.error("Failed to create workspace. Please try again.");
+                toast.error(result.error || "Failed to create workspace");
             }
         } catch {
             toast.error("Failed to create workspace. Please try again.");
@@ -121,18 +121,18 @@ export default function DashboardPage() {
 
         setCreating(true);
         try {
-            const board = await createBoard({
+            const result = await createBoard({
                 workspace_id: selectedWorkspaceId,
                 name: nameValidation.data,
                 background_color: newBoardColor,
             });
-            if (board) {
+            if (result.board) {
                 setNewBoardName("");
                 setShowCreateBoardModal(false);
                 toast.success("Board created successfully");
-                router.push(`/dashboard/board/${board.id}`);
+                router.push(`/dashboard/board/${result.board.id}`);
             } else {
-                toast.error("Failed to create board. Please try again.");
+                toast.error(result.error || "Failed to create board");
             }
         } catch {
             toast.error("Failed to create board. Please try again.");

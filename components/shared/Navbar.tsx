@@ -107,14 +107,12 @@ export default function Navbar() {
                 </div>
               </MenuItem>
 
-              <MenuItem setActive={setActive} active={active} item="Pricing">
-                <div className="flex flex-col space-y-4 text-sm">
-                  <HoveredLink href="/pricing/free">Free Plan</HoveredLink>
-                  <HoveredLink href="/pricing/professional">Professional</HoveredLink>
-                  <HoveredLink href="/pricing/business">Business</HoveredLink>
-                  <HoveredLink href="/pricing/enterprise">Enterprise</HoveredLink>
-                </div>
-              </MenuItem>
+              <Link
+                href="/pricing"
+                className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white font-medium transition-colors"
+              >
+                Pricing
+              </Link>
             </div>
 
             {/* Desktop: Right - Auth + Theme Toggle */}
