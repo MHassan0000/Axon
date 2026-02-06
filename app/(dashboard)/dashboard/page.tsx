@@ -194,7 +194,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/80">
                 <div>
                     <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Dashboard</h1>
-                    <p className="text-sm text-zinc-500 mt-0.5">Welcome back to your workspace</p>
+                    <p className="text-sm text-zinc-700 dark:text-zinc-400 mt-0.5">Welcome back to your workspace</p>
                 </div>
             </div>
 
@@ -205,17 +205,17 @@ export default function DashboardPage() {
                     <div className="flex flex-col items-center justify-center h-full min-h-100">
                         <div className="relative mb-6">
                             <div className="w-20 h-20 rounded-2xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center">
-                                <FolderKanban className="w-10 h-10 text-zinc-400 dark:text-zinc-600" />
+                                <FolderKanban className="w-10 h-10 text-zinc-600 dark:text-zinc-600" />
                             </div>
                             <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 flex items-center justify-center">
-                                <Sparkles className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
+                                <Sparkles className="w-3 h-3 text-zinc-700 dark:text-zinc-400" />
                             </div>
                         </div>
 
                         <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                             No workspaces yet
                         </h2>
-                        <p className="text-sm text-zinc-500 text-center max-w-sm mb-8">
+                        <p className="text-sm text-zinc-700 dark:text-zinc-400 text-center max-w-sm mb-8">
                             Create your first workspace to get started. Organize your boards,
                             collaborate with your team, and track progress.
                         </p>
@@ -249,9 +249,9 @@ export default function DashboardPage() {
                                     className="group flex flex-col items-center justify-center p-6 bg-zinc-50 dark:bg-zinc-900/50 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all min-h-35"
                                 >
                                     <div className="w-10 h-10 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                                        <Plus className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+                                        <Plus className="w-5 h-5 text-zinc-700 dark:text-zinc-400" />
                                     </div>
-                                    <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-400">
                                         New Workspace
                                     </span>
                                 </button>

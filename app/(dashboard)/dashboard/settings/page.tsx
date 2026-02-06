@@ -52,7 +52,7 @@ export default function SettingsPage() {
                         <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
                             Settings
                         </h1>
-                        <p className="text-sm text-zinc-500">
+                        <p className="text-sm text-zinc-700 dark:text-zinc-400">
                             Manage your preferences
                         </p>
                     </div>

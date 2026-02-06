@@ -21,7 +21,7 @@ export default function HelpPage() {
                         <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
                             Help & Support
                         </h1>
-                        <p className="text-sm text-zinc-500">
+                        <p className="text-sm text-zinc-700 dark:text-zinc-400">
                             Keyboard shortcuts and FAQs
                         </p>
                     </div>
@@ -44,7 +44,7 @@ export default function HelpPage() {
                                     key={index}
                                     className="flex items-center justify-between py-2 px-3 bg-white dark:bg-zinc-800/50 rounded-lg"
                                 >
-                                    <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                                    <span className="text-sm text-zinc-700 dark:text-zinc-400">
                                         {shortcut.description}
                                     </span>
                                     <div className="flex items-center gap-1">
@@ -54,7 +54,7 @@ export default function HelpPage() {
                                                     {key}
                                                 </kbd>
                                                 {i < shortcut.keys.length - 1 && (
-                                                    <span className="text-zinc-400 text-xs">+</span>
+                                                    <span className="text-zinc-600 dark:text-zinc-400 text-xs">+</span>
                                                 )}
                                             </React.Fragment>
                                         ))}
@@ -80,7 +80,7 @@ export default function HelpPage() {
                                     <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-2">
                                         {item.question}
                                     </h3>
-                                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                                    <p className="text-sm text-zinc-700 dark:text-zinc-400">
                                         {item.answer}
                                     </p>
                                 </div>
@@ -95,7 +95,7 @@ export default function HelpPage() {
                             Need More Help?
                         </h2>
 
-                        <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                        <p className="text-sm text-zinc-700 dark:text-zinc-400 mb-4">
                             Can't find what you're looking for? Reach out to our support team.
                         </p>
 
@@ -109,7 +109,7 @@ export default function HelpPage() {
                     </section>
 
                     {/* Version Info */}
-                    <div className="text-center text-xs text-zinc-400 dark:text-zinc-500">
+                    <div className="text-center text-xs text-zinc-600 dark:text-zinc-500">
                         Axon v{appVersion}
                     </div>
                 </div>

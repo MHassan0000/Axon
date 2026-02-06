@@ -31,7 +31,7 @@ const getActionIcon = (action: string) => {
         case "assigned":
             return <Users className="w-4 h-4 text-orange-500" />;
         default:
-            return <Activity className="w-4 h-4 text-zinc-400" />;
+            return <Activity className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />;
     }
 };
 
@@ -79,7 +79,7 @@ export default function MessagesPage() {
                         <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
                             Activity
                         </h1>
-                        <p className="text-sm text-zinc-500">
+                        <p className="text-sm text-zinc-700 dark:text-zinc-400">
                             {activities.length > 0
                                 ? `${activities.length} recent activities`
                                 : "Recent team activity"}
@@ -92,17 +92,17 @@ export default function MessagesPage() {
             <div className="flex-1 overflow-auto p-4 sm:p-6">
                 {loading ? (
                     <div className="flex items-center justify-center h-64">
-                        <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
+                        <Loader2 className="w-8 h-8 text-zinc-600 dark:text-zinc-400 animate-spin" />
                     </div>
                 ) : activities.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-64">
                         <div className="w-16 h-16 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center mb-4">
-                            <Activity className="w-8 h-8 text-zinc-400" />
+                            <Activity className="w-8 h-8 text-zinc-600 dark:text-zinc-400" />
                         </div>
                         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                             No activity yet
                         </h2>
-                        <p className="text-sm text-zinc-500 text-center max-w-sm">
+                        <p className="text-sm text-zinc-700 dark:text-zinc-400 text-center max-w-sm">
                             When you and your team make changes, they'll appear here
                         </p>
                     </div>
@@ -135,7 +135,7 @@ export default function MessagesPage() {
                                         <span className="font-medium text-zinc-900 dark:text-zinc-100">
                                             {activity.user?.name || "Unknown"}
                                         </span>
-                                        <span className="text-zinc-500">
+                                        <span className="text-zinc-700 dark:text-zinc-400">
                                             {activity.action}
                                         </span>
                                     </div>
@@ -146,7 +146,7 @@ export default function MessagesPage() {
                                                 : String(activity.details)}
                                         </p>
                                     )}
-                                    <div className="flex items-center gap-1 mt-2 text-xs text-zinc-400">
+                                    <div className="flex items-center gap-1 mt-2 text-xs text-zinc-600 dark:text-zinc-400">
                                         <Clock className="w-3 h-3" />
                                         {formatTimeAgo(activity.created_at)}
                                     </div>
