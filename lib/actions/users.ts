@@ -74,7 +74,7 @@ export async function syncCurrentUser(): Promise<User | null> {
 }
 
 /**
- * Get the current user from Supabase (must be synced first)
+ * Get the current user from Supabase (auto-syncs if not found)
  */
 export async function getCurrentUser(): Promise<User | null> {
   const clerkUser = await currentUser();
@@ -91,9 +91,10 @@ export async function getCurrentUser(): Promise<User | null> {
     .eq("clerk_id", clerkUser.id)
     .single();
 
-  if (error) {
-    console.error("Error fetching user:", error);
-    return null;
+  if (error || !user) {
+    // User not found in database, try to sync
+    console.log("User not found in database, syncing...");
+    return await syncCurrentUser();
   }
 
   return user;

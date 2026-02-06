@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
     LayoutDashboard,
     Settings,
@@ -20,8 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getWorkspaces } from "@/lib/actions";
-import type { Workspace } from "@/lib/types/database";
+import { useWorkspaces } from "@/lib/context/WorkspaceContext";
 
 interface NavItem {
     icon: React.ReactNode;
@@ -46,24 +45,8 @@ const bottomNavItems: NavItem[] = [
 export default function Sidebar() {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
-    const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-    const [loadingWorkspaces, setLoadingWorkspaces] = useState(true);
+    const { workspaces, loading: loadingWorkspaces } = useWorkspaces();
     const pathname = usePathname();
-
-    // Fetch workspaces for sidebar
-    useEffect(() => {
-        async function fetchWorkspaces() {
-            try {
-                const ws = await getWorkspaces();
-                setWorkspaces(ws);
-            } catch (error) {
-                console.error("Error fetching workspaces:", error);
-            } finally {
-                setLoadingWorkspaces(false);
-            }
-        }
-        fetchWorkspaces();
-    }, []);
 
     // Check if path matches or starts with href (for nested routes)
     const isActive = (href: string) => {

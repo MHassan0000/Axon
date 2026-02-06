@@ -155,7 +155,7 @@ export function GlobalSearch() {
     }
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[20vh]">
+        <div className="fixed inset-0 z-100 flex items-start justify-center pt-[20vh]">
             <div
                 className="absolute inset-0 bg-black/50 backdrop-blur-sm"
                 onClick={() => setIsOpen(false)}
@@ -197,13 +197,13 @@ export function GlobalSearch() {
                                     key={`${result.type}-${result.id}`}
                                     onClick={() => handleSelect(result)}
                                     className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${index === selectedIndex
-                                            ? "bg-zinc-100 dark:bg-zinc-800"
-                                            : "hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                                        ? "bg-zinc-100 dark:bg-zinc-800"
+                                        : "hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
                                         }`}
                                 >
                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${result.type === "workspace"
-                                            ? "bg-zinc-200 dark:bg-zinc-700"
-                                            : "bg-indigo-100 dark:bg-indigo-900/30"
+                                        ? "bg-zinc-200 dark:bg-zinc-700"
+                                        : "bg-indigo-100 dark:bg-indigo-900/30"
                                         }`}>
                                         {result.type === "workspace" ? (
                                             <Folder className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />

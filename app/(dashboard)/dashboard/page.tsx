@@ -10,31 +10,29 @@ import {
     LayoutGrid
 } from "lucide-react";
 import Link from "next/link";
-import { syncCurrentUser, getWorkspaces, createWorkspace, getBoards } from "@/lib/actions";
-import type { Workspace, Board } from "@/lib/types/database";
+import { toast } from "sonner";
+import { syncCurrentUser, createWorkspace, getBoards } from "@/lib/actions";
+import { useWorkspaces } from "@/lib/context/WorkspaceContext";
+import type { Board, Workspace } from "@/lib/types/database";
 
 export default function DashboardPage() {
-    const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+    const { workspaces, loading: loadingWorkspaces, addWorkspace } = useWorkspaces();
     const [boards, setBoards] = useState<Board[]>([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newWorkspaceName, setNewWorkspaceName] = useState("");
 
-    // Sync user and fetch workspaces on mount
+    // Sync user and fetch boards on mount
     useEffect(() => {
         async function initDashboard() {
             try {
                 // Sync user to Supabase
                 await syncCurrentUser();
 
-                // Fetch workspaces
-                const ws = await getWorkspaces();
-                setWorkspaces(ws);
-
                 // Fetch boards for first workspace if exists
-                if (ws.length > 0) {
-                    const b = await getBoards(ws[0].id);
+                if (workspaces.length > 0) {
+                    const b = await getBoards(workspaces[0].id);
                     setBoards(b);
                 }
             } catch (error) {
@@ -44,8 +42,10 @@ export default function DashboardPage() {
             }
         }
 
-        initDashboard();
-    }, []);
+        if (!loadingWorkspaces) {
+            initDashboard();
+        }
+    }, [workspaces, loadingWorkspaces]);
 
     const handleCreateWorkspace = async () => {
         if (!newWorkspaceName.trim()) return;
@@ -54,18 +54,23 @@ export default function DashboardPage() {
         try {
             const workspace = await createWorkspace({ name: newWorkspaceName });
             if (workspace) {
-                setWorkspaces([workspace, ...workspaces]);
+                // Update global context - sidebar will update automatically
+                addWorkspace(workspace);
                 setNewWorkspaceName("");
                 setShowCreateModal(false);
+                toast.success("Workspace created successfully");
+            } else {
+                toast.error("Failed to create workspace. Please try again.");
             }
         } catch (error) {
             console.error("Error creating workspace:", error);
+            toast.error("Failed to create workspace. Please try again.");
         } finally {
             setCreating(false);
         }
     };
 
-    if (loading) {
+    if (loading || loadingWorkspaces) {
         return (
             <div className="flex flex-col h-full bg-white dark:bg-black transition-colors duration-200">
                 <div className="flex items-center justify-center h-full">
@@ -123,10 +128,6 @@ export default function DashboardPage() {
                             >
                                 <Plus className="w-4 h-4" />
                                 Create Workspace
-                            </button>
-                            <button className="flex items-center gap-2 px-5 py-2.5 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg font-medium text-sm hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-all">
-                                Browse Templates
-                                <ArrowRight className="w-4 h-4" />
                             </button>
                         </div>
                     </div>
