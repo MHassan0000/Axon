@@ -26,28 +26,41 @@ import {
     CheckCircle2,
     Users,
     Tag,
+    Settings,
+    Copy,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
     getBoardWithLists,
     createList,
     createCard,
-    updateCard,
     deleteCard,
     deleteList,
     moveCard,
     reorderCards,
     reorderLists,
     updateList,
+    copyList,
+    updateBoard,
+    deleteBoard,
+    getWorkspaceMembers,
+    createLabel,
+    deleteLabel,
 } from "@/lib/actions";
 import { useBoardRealtime } from "@/lib/hooks/useRealtime";
+import { CardModal } from "@/components/dashboard-components/CardModal";
 import type {
     BoardWithLists,
     ListWithCards,
     CardWithRelations,
     Card,
     List,
-    Label
+    Label,
 } from "@/lib/types/database";
+import { BoardSettingsModal } from "@/components/dashboard-components/BoardSettingsModal";
+
+// Type for workspace members from the API
+type WorkspaceMember = { id: string; name: string | null; email: string; avatar_url: string | null; role: string };
 
 export default function BoardPage() {
     const params = useParams();
@@ -62,6 +75,8 @@ export default function BoardPage() {
     const [addingCardToList, setAddingCardToList] = useState<string | null>(null);
     const [newCardTitle, setNewCardTitle] = useState("");
     const [selectedCard, setSelectedCard] = useState<CardWithRelations | null>(null);
+    const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
+    const [showBoardSettings, setShowBoardSettings] = useState(false);
 
     // Fetch board data
     useEffect(() => {
@@ -69,6 +84,12 @@ export default function BoardPage() {
             try {
                 const b = await getBoardWithLists(boardId);
                 setBoard(b);
+
+                // Fetch workspace members for assignee picker
+                if (b) {
+                    const members = await getWorkspaceMembers(b.workspace_id);
+                    setWorkspaceMembers(members);
+                }
             } catch (error) {
                 console.error("Error fetching board:", error);
             } finally {
@@ -270,9 +291,11 @@ export default function BoardPage() {
                 });
                 setNewListName("");
                 setAddingList(false);
+                toast.success("List created");
             }
         } catch (error) {
             console.error("Error creating list:", error);
+            toast.error("Failed to create list");
         } finally {
             setCreatingList(false);
         }
@@ -296,9 +319,11 @@ export default function BoardPage() {
                 });
                 setNewCardTitle("");
                 setAddingCardToList(null);
+                toast.success("Card created");
             }
         } catch (error) {
             console.error("Error creating card:", error);
+            toast.error("Failed to create card");
         }
     };
 
@@ -319,8 +344,10 @@ export default function BoardPage() {
             setSelectedCard(null);
 
             await deleteCard(cardId);
+            toast.success("Card deleted");
         } catch (error) {
             console.error("Error deleting card:", error);
+            toast.error("Failed to delete card");
             // Refetch on error
             const b = await getBoardWithLists(boardId);
             setBoard(b);
@@ -331,6 +358,10 @@ export default function BoardPage() {
     const handleDeleteList = async (listId: string) => {
         if (!board) return;
 
+        if (!window.confirm("Are you sure you want to delete this list and all its cards?")) {
+            return;
+        }
+
         try {
             // Optimistic update
             setBoard({
@@ -339,8 +370,10 @@ export default function BoardPage() {
             });
 
             await deleteList(listId);
+            toast.success("List deleted");
         } catch (error) {
             console.error("Error deleting list:", error);
+            toast.error("Failed to delete list");
             // Refetch on error
             const b = await getBoardWithLists(boardId);
             setBoard(b);
@@ -401,7 +434,11 @@ export default function BoardPage() {
                         <Users className="w-4 h-4" />
                         <span className="hidden sm:inline">Share</span>
                     </button>
-                    <button className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                    <button
+                        onClick={() => setShowBoardSettings(true)}
+                        className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                        title="Board Settings"
+                    >
                         <MoreHorizontal className="w-5 h-5 text-white/80" />
                     </button>
                 </div>
@@ -507,6 +544,7 @@ export default function BoardPage() {
                 <CardModal
                     card={selectedCard}
                     labels={board.labels || []}
+                    workspaceMembers={workspaceMembers}
                     onClose={() => setSelectedCard(null)}
                     onDelete={() => {
                         const list = board.lists.find((l) =>
@@ -525,6 +563,18 @@ export default function BoardPage() {
                                 ),
                             })),
                         });
+                    }}
+                />
+            )}
+
+            {/* Board Settings Modal */}
+            {showBoardSettings && (
+                <BoardSettingsModal
+                    board={board}
+                    onClose={() => setShowBoardSettings(false)}
+                    onUpdate={(updatedBoard) => {
+                        setBoard({ ...board, ...updatedBoard });
+                        setShowBoardSettings(false);
                     }}
                 />
             )}
@@ -786,254 +836,6 @@ function CardItem({ card, onClick }: { card: CardWithRelations; onClick: () => v
                     )}
                 </div>
             )}
-        </div>
-    );
-}
-
-/* =====================================================
-   Card Modal Component
-   ===================================================== */
-
-interface CardModalProps {
-    card: CardWithRelations;
-    labels: Label[];
-    onClose: () => void;
-    onDelete: () => void;
-    onUpdate: (card: CardWithRelations) => void;
-}
-
-function CardModal({ card, labels, onClose, onDelete, onUpdate }: CardModalProps) {
-    const [editing, setEditing] = useState(false);
-    const [title, setTitle] = useState(card.title);
-    const [description, setDescription] = useState(card.description || "");
-    const [saving, setSaving] = useState(false);
-
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            await updateCard(card.id, { title, description });
-            onUpdate({ ...card, title, description });
-            setEditing(false);
-        } catch (error) {
-            console.error("Error updating card:", error);
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const handleToggleComplete = async () => {
-        try {
-            await updateCard(card.id, { is_complete: !card.is_complete });
-            onUpdate({ ...card, is_complete: !card.is_complete });
-        } catch (error) {
-            console.error("Error updating card:", error);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 sm:pt-20 px-4">
-            <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                onClick={onClose}
-            />
-            <div className="relative bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 w-full max-w-2xl shadow-2xl max-h-[85vh] overflow-y-auto">
-                {/* Header */}
-                <div className="sticky top-0 z-10 flex items-start justify-between p-6 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-                    <div className="flex-1 pr-4">
-                        {editing ? (
-                            <input
-                                type="text"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                className="w-full text-xl font-semibold text-zinc-900 dark:text-zinc-100 bg-transparent border-b-2 border-zinc-300 dark:border-zinc-700 focus:border-zinc-500 dark:focus:border-zinc-500 focus:outline-none pb-1"
-                                autoFocus
-                            />
-                        ) : (
-                            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                                {card.title}
-                            </h2>
-                        )}
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-                    >
-                        <X className="w-5 h-5 text-zinc-500" />
-                    </button>
-                </div>
-
-                {/* Content */}
-                <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Main Content */}
-                    <div className="md:col-span-2 space-y-6">
-                        {/* Labels */}
-                        {card.labels && card.labels.length > 0 && (
-                            <div>
-                                <h4 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2 flex items-center gap-2">
-                                    <Tag className="w-4 h-4" />
-                                    Labels
-                                </h4>
-                                <div className="flex flex-wrap gap-2">
-                                    {card.labels.map((label) => (
-                                        <span
-                                            key={label.id}
-                                            className="px-3 py-1 rounded-full text-sm font-medium text-white"
-                                            style={{ backgroundColor: label.color }}
-                                        >
-                                            {label.name}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Description */}
-                        <div>
-                            <h4 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-                                Description
-                            </h4>
-                            {editing ? (
-                                <textarea
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="Add a more detailed description..."
-                                    className="w-full min-h-30 px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-600"
-                                />
-                            ) : card.description ? (
-                                <p className="text-zinc-700 dark:text-zinc-300 text-sm whitespace-pre-wrap bg-zinc-50 dark:bg-zinc-800/50 rounded-lg p-3">
-                                    {card.description}
-                                </p>
-                            ) : (
-                                <p className="text-zinc-400 dark:text-zinc-500 text-sm italic">
-                                    No description yet...
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Due Date */}
-                        {card.due_date && (
-                            <div>
-                                <h4 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2 flex items-center gap-2">
-                                    <Calendar className="w-4 h-4" />
-                                    Due Date
-                                </h4>
-                                <div
-                                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm cursor-pointer ${card.is_complete
-                                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                                        : new Date(card.due_date) < new Date()
-                                            ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-                                        }`}
-                                    onClick={handleToggleComplete}
-                                >
-                                    {card.is_complete ? (
-                                        <CheckCircle2 className="w-4 h-4" />
-                                    ) : (
-                                        <Calendar className="w-4 h-4" />
-                                    )}
-                                    {new Date(card.due_date).toLocaleDateString("en-US", {
-                                        weekday: "short",
-                                        month: "short",
-                                        day: "numeric",
-                                    })}
-                                    {card.is_complete && (
-                                        <span className="text-xs">(Complete)</span>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Assignees */}
-                        {card.assignees && card.assignees.length > 0 && (
-                            <div>
-                                <h4 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2 flex items-center gap-2">
-                                    <Users className="w-4 h-4" />
-                                    Assignees
-                                </h4>
-                                <div className="flex flex-wrap gap-2">
-                                    {card.assignees.map((user) => (
-                                        <div
-                                            key={user.id}
-                                            className="flex items-center gap-2 px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-full"
-                                        >
-                                            <div className="w-6 h-6 rounded-full bg-zinc-300 dark:bg-zinc-600 flex items-center justify-center text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                                                {user.avatar_url ? (
-                                                    <img
-                                                        src={user.avatar_url}
-                                                        alt={user.name || ""}
-                                                        className="w-full h-full rounded-full object-cover"
-                                                    />
-                                                ) : (
-                                                    user.name?.[0]?.toUpperCase() || "?"
-                                                )}
-                                            </div>
-                                            <span className="text-sm text-zinc-700 dark:text-zinc-300">
-                                                {user.name || user.email}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Sidebar Actions */}
-                    <div className="space-y-2">
-                        <h4 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-                            Actions
-                        </h4>
-                        {editing ? (
-                            <>
-                                <button
-                                    onClick={handleSave}
-                                    disabled={saving}
-                                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg text-sm font-medium hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50"
-                                >
-                                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                    Save Changes
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setEditing(false);
-                                        setTitle(card.title);
-                                        setDescription(card.description || "");
-                                    }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-sm text-zinc-700 dark:text-zinc-300 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                            </>
-                        ) : (
-                            <>
-                                <button
-                                    onClick={() => setEditing(true)}
-                                    className="w-full flex items-center gap-2 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-sm text-zinc-700 dark:text-zinc-300 transition-colors"
-                                >
-                                    <Edit3 className="w-4 h-4" />
-                                    Edit
-                                </button>
-                                <button
-                                    onClick={handleToggleComplete}
-                                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${card.is_complete
-                                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50"
-                                        : "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
-                                        }`}
-                                >
-                                    <CheckCircle2 className="w-4 h-4" />
-                                    {card.is_complete ? "Mark Incomplete" : "Mark Complete"}
-                                </button>
-                                <button
-                                    onClick={onDelete}
-                                    className="w-full flex items-center gap-2 px-3 py-2 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 rounded-lg text-sm text-red-700 dark:text-red-400 transition-colors"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                    Delete
-                                </button>
-                            </>
-                        )}
-                    </div>
-                </div>
-            </div>
         </div>
     );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 
@@ -46,7 +47,17 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          
+          <Toaster
+            position="bottom-right"
+            toastOptions={{
+              style: {
+                background: 'var(--toast-bg, #18181b)',
+                border: '1px solid var(--toast-border, #27272a)',
+                color: 'var(--toast-text, #fafafa)',
+              },
+            }}
+            theme="system"
+          />
           {children}
         </body>
       </html>

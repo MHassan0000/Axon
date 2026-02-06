@@ -20,6 +20,7 @@ export {
   deleteWorkspace,
   addWorkspaceMember,
   removeWorkspaceMember,
+  getWorkspaceMembers,
 } from "./workspaces";
 
 // Board actions

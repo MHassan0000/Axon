@@ -326,3 +326,30 @@ export async function removeWorkspaceMember(
 
   return true;
 }
+
+/**
+ * Get all members of a workspace
+ */
+export async function getWorkspaceMembers(
+  workspaceId: string
+): Promise<{ id: string; name: string | null; email: string; avatar_url: string | null; role: string }[]> {
+  const supabase = await createClient();
+
+  const { data: members, error } = await supabase
+    .from("workspace_members")
+    .select("role, users(*)")
+    .eq("workspace_id", workspaceId);
+
+  if (error) {
+    console.error("Error fetching workspace members:", error);
+    return [];
+  }
+
+  return (members || []).map((m: any) => ({
+    id: m.users.id,
+    name: m.users.name,
+    email: m.users.email,
+    avatar_url: m.users.avatar_url,
+    role: m.role,
+  }));
+}
