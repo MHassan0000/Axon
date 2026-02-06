@@ -132,6 +132,26 @@ export interface ChecklistWithItems extends Checklist {
   items: ChecklistItem[];
 }
 
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: 'card_assigned' | 'comment_added' | 'due_soon' | 'due_overdue' | 'workspace_invite' | 'mentioned' | 'card_moved';
+  title: string;
+  message: string | null;
+  link: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface NotificationPreferences {
+  user_id: string;
+  email_enabled: boolean;
+  card_assigned: boolean;
+  comments: boolean;
+  due_reminders: boolean;
+  workspace_invites: boolean;
+}
+
 // =====================================================
 // Extended Types with Relations
 // =====================================================

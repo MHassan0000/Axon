@@ -8,7 +8,7 @@ import {
     FolderKanban,
     BarChart3,
     Calendar,
-    MessageSquare,
+    Activity,
     HelpCircle,
     Menu,
     X,
@@ -34,7 +34,7 @@ const mainNavItems: NavItem[] = [
     { icon: <BarChart3 className="w-5 h-5" />, label: "Analytics", href: "/dashboard/analytics" },
     { icon: <Calendar className="w-5 h-5" />, label: "Calendar", href: "/dashboard/calendar" },
     { icon: <Users className="w-5 h-5" />, label: "Team", href: "/dashboard/team" },
-    { icon: <MessageSquare className="w-5 h-5" />, label: "Messages", href: "/dashboard/messages" },
+    { icon: <Activity className="w-5 h-5" />, label: "Activity", href: "/dashboard/activity" },
 ];
 
 const bottomNavItems: NavItem[] = [

@@ -159,19 +159,6 @@ export default function SettingsPage() {
                                     Coming Soon
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between py-2">
-                                <div>
-                                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                                        Push notifications
-                                    </p>
-                                    <p className="text-xs text-zinc-500">
-                                        Browser push notifications
-                                    </p>
-                                </div>
-                                <div className="px-3 py-1 bg-zinc-200 dark:bg-zinc-800 rounded text-xs font-medium text-zinc-500">
-                                    Coming Soon
-                                </div>
-                            </div>
                         </div>
                     </section>
 

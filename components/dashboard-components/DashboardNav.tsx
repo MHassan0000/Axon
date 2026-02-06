@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
     Search,
-    Bell,
     Plus,
     Command,
     Sun,
@@ -17,6 +16,7 @@ import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GlobalSearch } from "./GlobalSearch";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 export default function DashboardNav() {
     const [isDark, setIsDark] = useState(true);
@@ -176,13 +176,7 @@ export default function DashboardNav() {
                     </button>
 
                     {/* Notifications */}
-                    <Link href="/dashboard/messages">
-                        <button className="relative p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group">
-                            <Bell className="w-5 h-5 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition-colors" />
-                            {/* Notification dot */}
-                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-zinc-900 dark:bg-white rounded-full" />
-                        </button>
-                    </Link>
+                    <NotificationBell />
 
                     {/* Divider */}
                     <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-800 mx-1" />

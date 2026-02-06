@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import {
-    MessageSquare,
-    Loader2,
     Activity,
+    Loader2,
     Clock,
     MoveRight,
     CheckCircle,
@@ -75,15 +74,15 @@ export default function MessagesPage() {
             {/* Page Header */}
             <div className="px-4 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/80">
                 <div className="flex items-center gap-3">
-                    <MessageSquare className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
+                    <Activity className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
                     <div>
                         <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                            Messages
+                            Activity
                         </h1>
                         <p className="text-sm text-zinc-500">
                             {activities.length > 0
                                 ? `${activities.length} recent activities`
-                                : "Activity and notifications"}
+                                : "Recent team activity"}
                         </p>
                     </div>
                 </div>
