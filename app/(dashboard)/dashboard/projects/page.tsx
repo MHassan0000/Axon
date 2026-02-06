@@ -148,9 +148,7 @@ export default function ProjectsPage() {
                         {filteredBoards.map((ws) => (
                             <section key={ws.workspaceId}>
                                 <div className="flex items-center gap-2 mb-4">
-                                    <div className="w-6 h-6 rounded bg-linear-to-br from-zinc-600 to-zinc-800 flex items-center justify-center">
-                                        <LayoutGrid className="w-3.5 h-3.5 text-white" />
-                                    </div>
+                                    <LayoutGrid className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                                     <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                                         {ws.workspaceName}
                                     </h2>

@@ -47,9 +47,7 @@ export default function SettingsPage() {
             {/* Page Header */}
             <div className="px-4 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/80">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-linear-to-br from-zinc-600 to-zinc-800 flex items-center justify-center">
-                        <Settings className="w-5 h-5 text-white" />
-                    </div>
+                    <Settings className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
                     <div>
                         <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
                             Settings
@@ -79,8 +77,8 @@ export default function SettingsPage() {
                                     className="w-16 h-16 rounded-full object-cover"
                                 />
                             ) : (
-                                <div className="w-16 h-16 rounded-full bg-linear-to-br from-zinc-400 to-zinc-600 flex items-center justify-center">
-                                    <span className="text-2xl font-bold text-white">
+                                <div className="w-16 h-16 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
+                                    <span className="text-2xl font-bold text-zinc-600 dark:text-zinc-300">
                                         {(user?.fullName || user?.primaryEmailAddress?.emailAddress || "U")[0]?.toUpperCase()}
                                     </span>
                                 </div>

@@ -26,9 +26,7 @@ export default function MessagesPage() {
             {/* Page Header */}
             <div className="px-4 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/80">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-linear-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                        <MessageSquare className="w-5 h-5 text-white" />
-                    </div>
+                    <MessageSquare className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
                     <div>
                         <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
                             Messages

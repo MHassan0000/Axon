@@ -89,9 +89,7 @@ export default function AnalyticsPage() {
             {/* Page Header */}
             <div className="px-4 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/80">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                        <BarChart3 className="w-5 h-5 text-white" />
-                    </div>
+                    <BarChart3 className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
                     <div>
                         <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
                             Analytics
@@ -121,11 +119,7 @@ export default function AnalyticsPage() {
                                         {stat.value}
                                     </p>
                                 </div>
-                                <div
-                                    className={`w-10 h-10 rounded-lg bg-linear-to-br ${stat.color} flex items-center justify-center`}
-                                >
-                                    <stat.icon className="w-5 h-5 text-white" />
-                                </div>
+                                <stat.icon className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
                             </div>
                         </div>
                     ))}
@@ -146,8 +140,8 @@ export default function AnalyticsPage() {
                                         key={ws.id}
                                         className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800/50 rounded-lg"
                                     >
-                                        <div className="w-8 h-8 rounded bg-linear-to-br from-zinc-600 to-zinc-800 flex items-center justify-center">
-                                            <span className="text-xs font-bold text-white">
+                                        <div className="w-8 h-8 rounded bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
+                                            <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300">
                                                 {ws.name[0]?.toUpperCase()}
                                             </span>
                                         </div>

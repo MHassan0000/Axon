@@ -58,9 +58,7 @@ export default function CalendarPage() {
             <div className="px-4 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/80">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-linear-to-br from-rose-500 to-pink-600 flex items-center justify-center">
-                            <CalendarIcon className="w-5 h-5 text-white" />
-                        </div>
+                        <CalendarIcon className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
                         <div>
                             <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
                                 Calendar
