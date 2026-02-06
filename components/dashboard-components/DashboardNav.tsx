@@ -4,16 +4,14 @@ import React, { useState, useEffect, useRef, Suspense } from "react";
 import {
     Search,
     Plus,
-    Command,
     Sun,
     Moon,
     LayoutGrid,
     FolderKanban,
-    ListTodo,
 } from "lucide-react";
 import Image from "next/image";
-import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
+import { UserButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { LazyGlobalSearch } from "./LazyComponents";
 import NotificationBell from "@/components/notifications/NotificationBell";
@@ -139,22 +137,6 @@ export default function DashboardNav() {
                                         </p>
                                     </div>
                                 </button>
-                                <div className="my-2 border-t border-zinc-200 dark:border-zinc-800" />
-                                <Link
-                                    href="/dashboard"
-                                    onClick={() => setShowCreateMenu(false)}
-                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                >
-                                    <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                                        <ListTodo className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
-                                    </div>
-                                    <div>
-                                        <p className="font-medium">Quick Task</p>
-                                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                                            Add a task quickly
-                                        </p>
-                                    </div>
-                                </Link>
                             </div>
                         )}
                     </div>
