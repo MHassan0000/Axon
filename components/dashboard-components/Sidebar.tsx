@@ -58,10 +58,10 @@ export default function Sidebar() {
 
     return (
         <>
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - positioned in navbar area */}
             <button
                 onClick={() => setIsMobileOpen(true)}
-                className="lg:hidden fixed top-16 left-4 z-40 p-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-200 shadow-lg"
+                className="lg:hidden fixed top-3.5 left-4 z-60 p-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-200 shadow-sm"
                 aria-label="Open menu"
             >
                 <Menu className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />

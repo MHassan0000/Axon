@@ -59,7 +59,7 @@ export default function DashboardNav() {
     };
 
     return (
-        <header className="sticky top-0 z-50 h-14 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800/80 px-4 transition-colors duration-200">
+        <header className="sticky top-0 z-50 h-14 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800/80 px-4 pl-14 lg:pl-4 transition-colors duration-200">
             <div className="flex items-center justify-between h-full gap-4">
                 {/* Left Section - Logo */}
                 <div className="flex items-center gap-3">
