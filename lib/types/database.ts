@@ -111,6 +111,27 @@ export interface ActivityLog {
   created_at: string;
 }
 
+export interface Checklist {
+  id: string;
+  card_id: string;
+  title: string;
+  position: number;
+  created_at: string;
+}
+
+export interface ChecklistItem {
+  id: string;
+  checklist_id: string;
+  title: string;
+  is_complete: boolean;
+  position: number;
+  created_at: string;
+}
+
+export interface ChecklistWithItems extends Checklist {
+  items: ChecklistItem[];
+}
+
 // =====================================================
 // Extended Types with Relations
 // =====================================================
@@ -120,6 +141,7 @@ export interface CardWithRelations extends Card {
   assignees?: User[];
   comments_count?: number;
   attachments_count?: number;
+  checklists?: ChecklistWithItems[];
 }
 
 export interface ListWithCards extends List {

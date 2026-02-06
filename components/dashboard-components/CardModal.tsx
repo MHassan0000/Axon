@@ -14,6 +14,7 @@ import {
     Plus,
     Send,
     Clock,
+    ListChecks,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -32,6 +33,7 @@ import type {
     User,
     Comment,
 } from "@/lib/types/database";
+import { ChecklistSection } from "./ChecklistSection";
 
 /* =====================================================
    Types
@@ -539,8 +541,13 @@ export function CardModal({
                             )}
                         </div>
 
+                        {/* Checklists Section */}
+                        <div className="border-t border-zinc-200 dark:border-zinc-700 pt-4">
+                            <ChecklistSection cardId={card.id} />
+                        </div>
+
                         {/* Comments Section */}
-                        <div>
+                        <div className="border-t border-zinc-200 dark:border-zinc-700 pt-4">
                             <h4 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-3 flex items-center gap-2">
                                 <MessageSquare className="w-4 h-4" />
                                 Comments

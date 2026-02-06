@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Calendar as CalendarIcon,
     ChevronLeft,
@@ -8,6 +8,9 @@ import {
     Clock,
     Loader2,
 } from "lucide-react";
+import { useWorkspaces } from "@/lib/context/WorkspaceContext";
+import { getBoards, getBoardWithLists } from "@/lib/actions";
+import type { CardWithRelations } from "@/lib/types/database";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -15,11 +18,68 @@ const MONTHS = [
     "July", "August", "September", "October", "November", "December"
 ];
 
+interface CardDueDate {
+    card: CardWithRelations;
+    boardName: string;
+    boardColor: string;
+}
+
 export default function CalendarPage() {
+    const { workspaces, loading: loadingWorkspaces } = useWorkspaces();
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [cardsByDate, setCardsByDate] = useState<Map<string, CardDueDate[]>>(new Map());
+    const [loading, setLoading] = useState(true);
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
+
+    // Fetch all cards with due dates
+    useEffect(() => {
+        async function fetchCards() {
+            if (loadingWorkspaces) return;
+
+            try {
+                const allCards: CardDueDate[] = [];
+
+                for (const ws of workspaces) {
+                    const boards = await getBoards(ws.id);
+                    for (const board of boards) {
+                        const boardWithLists = await getBoardWithLists(board.id);
+                        if (boardWithLists?.lists) {
+                            for (const list of boardWithLists.lists) {
+                                for (const card of list.cards) {
+                                    if (card.due_date) {
+                                        allCards.push({
+                                            card,
+                                            boardName: board.name,
+                                            boardColor: board.background_color || "#6366f1",
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Group by date (YYYY-MM-DD)
+                const grouped = new Map<string, CardDueDate[]>();
+                allCards.forEach((item) => {
+                    const dateKey = new Date(item.card.due_date!).toISOString().split("T")[0];
+                    const existing = grouped.get(dateKey) || [];
+                    existing.push(item);
+                    grouped.set(dateKey, existing);
+                });
+
+                setCardsByDate(grouped);
+            } catch (error) {
+                console.error("Error fetching cards:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        fetchCards();
+    }, [workspaces, loadingWorkspaces]);
 
     // Get first day of month and total days
     const firstDayOfMonth = new Date(year, month, 1).getDay();
@@ -34,23 +94,31 @@ export default function CalendarPage() {
         calendarDays.push(i);
     }
 
-    const prevMonth = () => {
-        setCurrentDate(new Date(year, month - 1, 1));
-    };
-
-    const nextMonth = () => {
-        setCurrentDate(new Date(year, month + 1, 1));
-    };
-
-    const goToToday = () => {
-        setCurrentDate(new Date());
-    };
+    const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+    const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+    const goToToday = () => setCurrentDate(new Date());
 
     const today = new Date();
     const isToday = (day: number) =>
         day === today.getDate() &&
         month === today.getMonth() &&
         year === today.getFullYear();
+
+    // Get cards for a specific day
+    const getCardsForDay = (day: number): CardDueDate[] => {
+        const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        return cardsByDate.get(dateKey) || [];
+    };
+
+    if (loading || loadingWorkspaces) {
+        return (
+            <div className="flex flex-col h-full bg-white dark:bg-black">
+                <div className="flex items-center justify-center h-full">
+                    <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-white dark:bg-black overflow-hidden">
@@ -64,7 +132,9 @@ export default function CalendarPage() {
                                 Calendar
                             </h1>
                             <p className="text-sm text-zinc-500">
-                                View tasks and due dates
+                                {cardsByDate.size > 0
+                                    ? `${Array.from(cardsByDate.values()).flat().length} cards with due dates`
+                                    : "View tasks and due dates"}
                             </p>
                         </div>
                     </div>
@@ -115,49 +185,53 @@ export default function CalendarPage() {
 
                     {/* Calendar Days */}
                     <div className="grid grid-cols-7">
-                        {calendarDays.map((day, index) => (
-                            <div
-                                key={index}
-                                className={`
-                                    min-h-25 sm:min-h-30 p-2 border-b border-r border-zinc-200 dark:border-zinc-800/50
-                                    ${day === null ? "bg-zinc-100/50 dark:bg-zinc-950/50" : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"}
-                                    ${index % 7 === 6 ? "border-r-0" : ""}
-                                    transition-colors cursor-pointer
-                                `}
-                            >
-                                {day !== null && (
-                                    <>
-                                        <span
-                                            className={`
-                                                inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-medium
-                                                ${isToday(day)
-                                                    ? "bg-zinc-900 dark:bg-white text-white dark:text-black"
-                                                    : "text-zinc-700 dark:text-zinc-300"
-                                                }
-                                            `}
-                                        >
-                                            {day}
-                                        </span>
-                                        {/* Placeholder for due date cards */}
-                                    </>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Info */}
-                <div className="mt-6 p-4 bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl">
-                    <div className="flex items-center gap-3">
-                        <Clock className="w-5 h-5 text-zinc-500" />
-                        <div>
-                            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                                Due Date Integration Coming Soon
-                            </p>
-                            <p className="text-xs text-zinc-500">
-                                Cards with due dates will appear on the calendar automatically
-                            </p>
-                        </div>
+                        {calendarDays.map((day, index) => {
+                            const cards = day ? getCardsForDay(day) : [];
+                            return (
+                                <div
+                                    key={index}
+                                    className={`
+                                        min-h-25 sm:min-h-30 p-2 border-b border-r border-zinc-200 dark:border-zinc-800/50
+                                        ${day === null ? "bg-zinc-100/50 dark:bg-zinc-950/50" : ""}
+                                        ${index % 7 === 6 ? "border-r-0" : ""}
+                                    `}
+                                >
+                                    {day !== null && (
+                                        <>
+                                            <span
+                                                className={`
+                                                    inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-medium
+                                                    ${isToday(day)
+                                                        ? "bg-zinc-900 dark:bg-white text-white dark:text-black"
+                                                        : "text-zinc-700 dark:text-zinc-300"
+                                                    }
+                                                `}
+                                            >
+                                                {day}
+                                            </span>
+                                            {/* Due Date Cards */}
+                                            <div className="mt-1 space-y-1">
+                                                {cards.slice(0, 3).map((item) => (
+                                                    <div
+                                                        key={item.card.id}
+                                                        className="px-1.5 py-0.5 text-xs rounded truncate text-white"
+                                                        style={{ backgroundColor: item.boardColor }}
+                                                        title={`${item.card.title} (${item.boardName})`}
+                                                    >
+                                                        {item.card.title}
+                                                    </div>
+                                                ))}
+                                                {cards.length > 3 && (
+                                                    <div className="text-xs text-zinc-500 pl-1.5">
+                                                        +{cards.length - 3} more
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>

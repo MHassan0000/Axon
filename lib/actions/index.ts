@@ -60,3 +60,23 @@ export {
   getComments,
   deleteComment,
 } from "./cards";
+
+// Checklist actions
+export {
+  createChecklist,
+  getChecklists,
+  deleteChecklist,
+  updateChecklist,
+  addChecklistItem,
+  toggleChecklistItem,
+  deleteChecklistItem,
+  updateChecklistItem,
+} from "./checklists";
+
+// Activity actions
+export {
+  logActivity,
+  getRecentActivity,
+  getCardActivity,
+  getBoardActivity,
+} from "./activity";
