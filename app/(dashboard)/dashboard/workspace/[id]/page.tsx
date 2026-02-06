@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getWorkspaceWithBoards, createBoard, getBoards } from "@/lib/actions";
+import { boardNameSchema } from "@/lib/validations";
 import { WorkspaceSettingsModal } from "@/components/dashboard-components/WorkspaceSettingsModal";
 import type { WorkspaceWithBoards, Board } from "@/lib/types/database";
 
@@ -33,8 +34,8 @@ export default function WorkspacePage() {
             try {
                 const ws = await getWorkspaceWithBoards(workspaceId);
                 setWorkspace(ws);
-            } catch (error) {
-                console.error("Error fetching workspace:", error);
+            } catch {
+                toast.error("Failed to load workspace");
             } finally {
                 setLoading(false);
             }
@@ -44,13 +45,17 @@ export default function WorkspacePage() {
     }, [workspaceId]);
 
     const handleCreateBoard = async () => {
-        if (!newBoardName.trim()) return;
+        const validation = boardNameSchema.safeParse(newBoardName);
+        if (!validation.success) {
+            toast.error(validation.error.issues[0]?.message || "Invalid board name");
+            return;
+        }
 
         setCreating(true);
         try {
             const board = await createBoard({
                 workspace_id: workspaceId,
-                name: newBoardName
+                name: validation.data
             });
             if (board && workspace) {
                 setWorkspace({
@@ -61,8 +66,8 @@ export default function WorkspacePage() {
                 setShowCreateModal(false);
                 toast.success("Board created");
             }
-        } catch (error) {
-            console.error("Error creating board:", error);
+        } catch {
+            toast.error("Failed to create board");
         } finally {
             setCreating(false);
         }

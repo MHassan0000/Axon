@@ -20,6 +20,7 @@ import {
     createLabel,
     deleteLabel,
 } from "@/lib/actions";
+import { boardNameSchema, labelNameSchema, labelColorSchema } from "@/lib/validations";
 import type { Board, Label } from "@/lib/types/database";
 
 /* =====================================================
@@ -84,20 +85,23 @@ export function BoardSettingsModal({
 
     // Save board settings
     const handleSaveBoard = async () => {
-        if (!boardName.trim()) return;
+        const validation = boardNameSchema.safeParse(boardName);
+        if (!validation.success) {
+            toast.error(validation.error.issues[0]?.message || "Invalid board name");
+            return;
+        }
 
         setSaving(true);
         try {
             const updated = await updateBoard(board.id, {
-                name: boardName,
+                name: validation.data,
                 background_color: boardColor,
             });
             if (updated) {
                 onUpdate(updated);
                 toast.success("Board updated");
             }
-        } catch (error) {
-            console.error("Error updating board:", error);
+        } catch {
             toast.error("Failed to update board");
         } finally {
             setSaving(false);
@@ -106,7 +110,17 @@ export function BoardSettingsModal({
 
     // Create label
     const handleCreateLabel = async () => {
-        if (!newLabelName.trim()) return;
+        const nameValidation = labelNameSchema.safeParse(newLabelName);
+        const colorValidation = labelColorSchema.safeParse(newLabelColor);
+
+        if (!nameValidation.success) {
+            toast.error(nameValidation.error.issues[0]?.message || "Invalid label name");
+            return;
+        }
+        if (!colorValidation.success) {
+            toast.error("Invalid label color");
+            return;
+        }
 
         setCreatingLabel(true);
         try {
@@ -117,8 +131,7 @@ export function BoardSettingsModal({
                 setNewLabelColor(PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)]);
                 toast.success("Label created");
             }
-        } catch (error) {
-            console.error("Error creating label:", error);
+        } catch {
             toast.error("Failed to create label");
         } finally {
             setCreatingLabel(false);
@@ -131,8 +144,7 @@ export function BoardSettingsModal({
             await deleteLabel(labelId);
             setLabels(labels.filter(l => l.id !== labelId));
             toast.success("Label deleted");
-        } catch (error) {
-            console.error("Error deleting label:", error);
+        } catch {
             toast.error("Failed to delete label");
         }
     };
@@ -151,8 +163,7 @@ export function BoardSettingsModal({
                 toast.success("Board deleted");
                 router.push(`/dashboard/workspace/${board.workspace_id}`);
             }
-        } catch (error) {
-            console.error("Error deleting board:", error);
+        } catch {
             toast.error("Failed to delete board");
             setDeleting(false);
         }
@@ -186,8 +197,8 @@ export function BoardSettingsModal({
                     <button
                         onClick={() => setActiveTab("general")}
                         className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "general"
-                                ? "border-zinc-900 dark:border-white text-zinc-900 dark:text-white"
-                                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                            ? "border-zinc-900 dark:border-white text-zinc-900 dark:text-white"
+                            : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                             }`}
                     >
                         General
@@ -195,8 +206,8 @@ export function BoardSettingsModal({
                     <button
                         onClick={() => setActiveTab("labels")}
                         className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "labels"
-                                ? "border-zinc-900 dark:border-white text-zinc-900 dark:text-white"
-                                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                            ? "border-zinc-900 dark:border-white text-zinc-900 dark:text-white"
+                            : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                             }`}
                     >
                         Labels
@@ -204,8 +215,8 @@ export function BoardSettingsModal({
                     <button
                         onClick={() => setActiveTab("danger")}
                         className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "danger"
-                                ? "border-red-500 text-red-600 dark:text-red-400"
-                                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                            ? "border-red-500 text-red-600 dark:text-red-400"
+                            : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                             }`}
                     >
                         Danger Zone
@@ -241,8 +252,8 @@ export function BoardSettingsModal({
                                             key={color}
                                             onClick={() => setBoardColor(color)}
                                             className={`w-8 h-8 rounded-lg transition-transform ${boardColor === color
-                                                    ? "ring-2 ring-offset-2 ring-zinc-900 dark:ring-white scale-110"
-                                                    : "hover:scale-105"
+                                                ? "ring-2 ring-offset-2 ring-zinc-900 dark:ring-white scale-110"
+                                                : "hover:scale-105"
                                                 }`}
                                             style={{ backgroundColor: color }}
                                         />
@@ -296,8 +307,8 @@ export function BoardSettingsModal({
                                             key={color}
                                             onClick={() => setNewLabelColor(color)}
                                             className={`w-6 h-6 rounded transition-transform ${newLabelColor === color
-                                                    ? "ring-2 ring-offset-1 ring-zinc-900 dark:ring-white scale-110"
-                                                    : "hover:scale-105"
+                                                ? "ring-2 ring-offset-1 ring-zinc-900 dark:ring-white scale-110"
+                                                : "hover:scale-105"
                                                 }`}
                                             style={{ backgroundColor: color }}
                                         />

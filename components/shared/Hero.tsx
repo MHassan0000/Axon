@@ -19,12 +19,10 @@ export default function Hero() {
         if (playPromise !== undefined) {
           playPromise
             .then(() => {
-
-              console.log("Video is playing");
+              // Video playing successfully
             })
-            .catch((error) => {
-
-              console.log("Video autoplay prevented:", error);
+            .catch(() => {
+              // Autoplay prevented - user interaction needed
             });
         }
       }

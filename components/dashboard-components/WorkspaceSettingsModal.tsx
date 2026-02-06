@@ -24,6 +24,7 @@ import {
     addWorkspaceMember,
     searchUsers,
 } from "@/lib/actions";
+import { workspaceNameSchema, workspaceDescriptionSchema } from "@/lib/validations";
 import type { Workspace } from "@/lib/types/database";
 
 /* =====================================================
@@ -81,8 +82,8 @@ export function WorkspaceSettingsModal({
             try {
                 const m = await getWorkspaceMembers(workspace.id);
                 setMembers(m);
-            } catch (error) {
-                console.error("Error loading members:", error);
+            } catch {
+                toast.error("Failed to load members");
             } finally {
                 setLoadingMembers(false);
             }
@@ -100,11 +101,10 @@ export function WorkspaceSettingsModal({
             setSearching(true);
             try {
                 const results = await searchUsers(searchQuery);
-                // Filter out existing members
                 const memberIds = new Set(members.map((m) => m.id));
                 setSearchResults(results.filter((u: any) => !memberIds.has(u.id)));
-            } catch (error) {
-                console.error("Error searching users:", error);
+            } catch {
+                // Silently fail on search errors
             } finally {
                 setSearching(false);
             }
@@ -115,18 +115,24 @@ export function WorkspaceSettingsModal({
 
     // Save general settings
     const handleSaveGeneral = async () => {
-        if (!name.trim()) {
-            toast.error("Workspace name is required");
+        const nameValidation = workspaceNameSchema.safeParse(name);
+        if (!nameValidation.success) {
+            toast.error(nameValidation.error.issues[0]?.message || "Invalid workspace name");
+            return;
+        }
+
+        const descValidation = workspaceDescriptionSchema.safeParse(description);
+        if (!descValidation.success) {
+            toast.error(descValidation.error.issues[0]?.message || "Invalid description");
             return;
         }
 
         setSaving(true);
         try {
-            await updateWorkspace(workspace.id, { name, description });
-            onUpdate({ name, description });
+            await updateWorkspace(workspace.id, { name: nameValidation.data, description });
+            onUpdate({ name: nameValidation.data, description });
             toast.success("Workspace updated");
-        } catch (error) {
-            console.error("Error updating workspace:", error);
+        } catch {
             toast.error("Failed to update workspace");
         } finally {
             setSaving(false);
@@ -138,14 +144,12 @@ export function WorkspaceSettingsModal({
         setAddingMember(true);
         try {
             await addWorkspaceMember(workspace.id, userId);
-            // Refresh members list
             const m = await getWorkspaceMembers(workspace.id);
             setMembers(m);
             setSearchQuery("");
             setSearchResults([]);
             toast.success(`Added ${userEmail} to workspace`);
-        } catch (error) {
-            console.error("Error adding member:", error);
+        } catch {
             toast.error("Failed to add member");
         } finally {
             setAddingMember(false);
@@ -162,8 +166,7 @@ export function WorkspaceSettingsModal({
             await removeWorkspaceMember(workspace.id, userId);
             setMembers(members.filter((m) => m.id !== userId));
             toast.success("Member removed");
-        } catch (error) {
-            console.error("Error removing member:", error);
+        } catch {
             toast.error("Failed to remove member");
         }
     };
@@ -180,8 +183,7 @@ export function WorkspaceSettingsModal({
             await deleteWorkspace(workspace.id);
             toast.success("Workspace deleted");
             router.push("/dashboard");
-        } catch (error) {
-            console.error("Error deleting workspace:", error);
+        } catch {
             toast.error("Failed to delete workspace");
         } finally {
             setDeleting(false);
@@ -216,8 +218,8 @@ export function WorkspaceSettingsModal({
                     <button
                         onClick={() => setActiveTab("general")}
                         className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "general"
-                                ? "border-zinc-900 dark:border-white text-zinc-900 dark:text-white"
-                                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                            ? "border-zinc-900 dark:border-white text-zinc-900 dark:text-white"
+                            : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                             }`}
                     >
                         <Edit3 className="w-4 h-4" />
@@ -226,8 +228,8 @@ export function WorkspaceSettingsModal({
                     <button
                         onClick={() => setActiveTab("members")}
                         className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "members"
-                                ? "border-zinc-900 dark:border-white text-zinc-900 dark:text-white"
-                                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                            ? "border-zinc-900 dark:border-white text-zinc-900 dark:text-white"
+                            : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                             }`}
                     >
                         <Users className="w-4 h-4" />
@@ -236,8 +238,8 @@ export function WorkspaceSettingsModal({
                     <button
                         onClick={() => setActiveTab("danger")}
                         className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "danger"
-                                ? "border-red-500 text-red-500"
-                                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                            ? "border-red-500 text-red-500"
+                            : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                             }`}
                     >
                         <AlertTriangle className="w-4 h-4" />

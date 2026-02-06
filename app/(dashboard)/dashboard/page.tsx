@@ -13,6 +13,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { syncCurrentUser, createWorkspace, createBoard, getBoards } from "@/lib/actions";
 import { useWorkspaces } from "@/lib/context/WorkspaceContext";
+import { workspaceNameSchema, boardNameSchema, boardColorSchema } from "@/lib/validations";
 import type { Board, Workspace } from "@/lib/types/database";
 
 export default function DashboardPage() {
@@ -74,11 +75,16 @@ export default function DashboardPage() {
     }, [workspaces, loadingWorkspaces]);
 
     const handleCreateWorkspace = async () => {
-        if (!newWorkspaceName.trim()) return;
+        // Validate input
+        const validation = workspaceNameSchema.safeParse(newWorkspaceName);
+        if (!validation.success) {
+            toast.error(validation.error.issues[0]?.message || "Invalid workspace name");
+            return;
+        }
 
         setCreating(true);
         try {
-            const workspace = await createWorkspace({ name: newWorkspaceName });
+            const workspace = await createWorkspace({ name: validation.data });
             if (workspace) {
                 addWorkspace(workspace);
                 setNewWorkspaceName("");
@@ -87,8 +93,7 @@ export default function DashboardPage() {
             } else {
                 toast.error("Failed to create workspace. Please try again.");
             }
-        } catch (error) {
-            console.error("Error creating workspace:", error);
+        } catch {
             toast.error("Failed to create workspace. Please try again.");
         } finally {
             setCreating(false);
@@ -96,26 +101,40 @@ export default function DashboardPage() {
     };
 
     const handleCreateBoard = async () => {
-        if (!newBoardName.trim() || !selectedWorkspaceId) return;
+        // Validate inputs
+        const nameValidation = boardNameSchema.safeParse(newBoardName);
+        if (!nameValidation.success) {
+            toast.error(nameValidation.error.issues[0]?.message || "Invalid board name");
+            return;
+        }
+
+        const colorValidation = boardColorSchema.safeParse(newBoardColor);
+        if (!colorValidation.success) {
+            toast.error("Invalid board color");
+            return;
+        }
+
+        if (!selectedWorkspaceId) {
+            toast.error("Please select a workspace");
+            return;
+        }
 
         setCreating(true);
         try {
             const board = await createBoard({
                 workspace_id: selectedWorkspaceId,
-                name: newBoardName,
+                name: nameValidation.data,
                 background_color: newBoardColor,
             });
             if (board) {
                 setNewBoardName("");
                 setShowCreateBoardModal(false);
                 toast.success("Board created successfully");
-                // Navigate to the new board
                 router.push(`/dashboard/board/${board.id}`);
             } else {
                 toast.error("Failed to create board. Please try again.");
             }
-        } catch (error) {
-            console.error("Error creating board:", error);
+        } catch {
             toast.error("Failed to create board. Please try again.");
         } finally {
             setCreating(false);
@@ -324,8 +343,8 @@ export default function DashboardPage() {
                                         key={color}
                                         onClick={() => setNewBoardColor(color)}
                                         className={`w-8 h-8 rounded-lg transition-all ${newBoardColor === color
-                                                ? "ring-2 ring-offset-2 ring-zinc-500 dark:ring-offset-zinc-900 scale-110"
-                                                : "hover:scale-105"
+                                            ? "ring-2 ring-offset-2 ring-zinc-500 dark:ring-offset-zinc-900 scale-110"
+                                            : "hover:scale-105"
                                             }`}
                                         style={{ backgroundColor: color }}
                                     />

@@ -92,8 +92,7 @@ export async function getCurrentUser(): Promise<User | null> {
     .single();
 
   if (error || !user) {
-    // User not found in database, try to sync
-    console.log("User not found in database, syncing...");
+    // User not found in database, sync from Clerk
     return await syncCurrentUser();
   }
 
