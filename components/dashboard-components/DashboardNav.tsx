@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
     Search,
     Bell,
@@ -8,14 +8,21 @@ import {
     Command,
     Sun,
     Moon,
+    LayoutGrid,
+    FolderKanban,
+    ListTodo,
 } from "lucide-react";
 import Image from "next/image";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function DashboardNav() {
     const [searchValue, setSearchValue] = useState("");
     const [isDark, setIsDark] = useState(true);
+    const [showCreateMenu, setShowCreateMenu] = useState(false);
+    const createMenuRef = useRef<HTMLDivElement>(null);
+    const router = useRouter();
 
     // Initialize theme from localStorage
     useEffect(() => {
@@ -26,6 +33,17 @@ export default function DashboardNav() {
         } else {
             document.documentElement.classList.remove("dark");
         }
+    }, []);
+
+    // Close menu on outside click
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (createMenuRef.current && !createMenuRef.current.contains(event.target as Node)) {
+                setShowCreateMenu(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     // Toggle theme
@@ -64,11 +82,72 @@ export default function DashboardNav() {
                     {/* Divider */}
                     <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 hidden md:block" />
 
-                    {/* Create Button */}
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-black hover:bg-zinc-700 dark:hover:bg-zinc-200 rounded-lg transition-colors font-medium">
-                        <Plus className="w-4 h-4" />
-                        <span className="text-sm hidden sm:block">Create</span>
-                    </button>
+                    {/* Create Button with Dropdown */}
+                    <div className="relative" ref={createMenuRef}>
+                        <button
+                            onClick={() => setShowCreateMenu(!showCreateMenu)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-black hover:bg-zinc-700 dark:hover:bg-zinc-200 rounded-lg transition-colors font-medium"
+                        >
+                            <Plus className="w-4 h-4" />
+                            <span className="text-sm hidden sm:block">Create</span>
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {showCreateMenu && (
+                            <div className="absolute left-0 top-full mt-2 w-56 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-lg py-2 z-50">
+                                <button
+                                    onClick={() => {
+                                        router.push("/dashboard?create=workspace");
+                                        setShowCreateMenu(false);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                >
+                                    <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                                        <LayoutGrid className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium">Workspace</p>
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                                            Organize your projects
+                                        </p>
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        router.push("/dashboard?create=board");
+                                        setShowCreateMenu(false);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                >
+                                    <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                                        <FolderKanban className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium">Board</p>
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                                            Kanban-style board
+                                        </p>
+                                    </div>
+                                </button>
+                                <div className="my-2 border-t border-zinc-200 dark:border-zinc-800" />
+                                <Link
+                                    href="/dashboard"
+                                    onClick={() => setShowCreateMenu(false)}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                >
+                                    <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                                        <ListTodo className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium">Quick Task</p>
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                                            Add a task quickly
+                                        </p>
+                                    </div>
+                                </Link>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Center Section - Search */}

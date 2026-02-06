@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     LayoutDashboard,
     Settings,
@@ -14,9 +14,14 @@ import {
     X,
     PanelLeftClose,
     PanelLeft,
+    Plus,
+    LayoutGrid,
+    Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { getWorkspaces } from "@/lib/actions";
+import type { Workspace } from "@/lib/types/database";
 
 interface NavItem {
     icon: React.ReactNode;
@@ -41,7 +46,32 @@ const bottomNavItems: NavItem[] = [
 export default function Sidebar() {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+    const [loadingWorkspaces, setLoadingWorkspaces] = useState(true);
     const pathname = usePathname();
+
+    // Fetch workspaces for sidebar
+    useEffect(() => {
+        async function fetchWorkspaces() {
+            try {
+                const ws = await getWorkspaces();
+                setWorkspaces(ws);
+            } catch (error) {
+                console.error("Error fetching workspaces:", error);
+            } finally {
+                setLoadingWorkspaces(false);
+            }
+        }
+        fetchWorkspaces();
+    }, []);
+
+    // Check if path matches or starts with href (for nested routes)
+    const isActive = (href: string) => {
+        if (href === "/dashboard") {
+            return pathname === "/dashboard";
+        }
+        return pathname.startsWith(href);
+    };
 
     return (
         <>
@@ -68,7 +98,7 @@ export default function Sidebar() {
                     fixed lg:relative z-50 lg:z-auto
                     flex flex-col bg-zinc-50 dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800/80
                     h-full transition-all duration-300 ease-out
-                    ${isCollapsed ? "lg:w-18" : "lg:w-64"}
+                    ${isCollapsed ? "lg:w-[72px]" : "lg:w-64"}
                     ${isMobileOpen ? "translate-x-0 w-72" : "-translate-x-full lg:translate-x-0"}
                 `}
             >
@@ -105,7 +135,7 @@ export default function Sidebar() {
                 <div className={`flex items-center h-14 border-b border-zinc-200 dark:border-zinc-800/80 px-4 ${isCollapsed ? "justify-center" : ""}`}>
                     {!isCollapsed && (
                         <span className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-                            Workspace
+                            Axon
                         </span>
                     )}
                     {isCollapsed && (
@@ -125,11 +155,91 @@ export default function Sidebar() {
                                 label={item.label}
                                 href={item.href}
                                 isCollapsed={isCollapsed}
-                                isActive={pathname === item.href}
+                                isActive={isActive(item.href)}
                                 onMobileClick={() => setIsMobileOpen(false)}
                             />
                         ))}
                     </nav>
+
+                    {/* Workspaces Section */}
+                    {!isCollapsed && (
+                        <div className="mt-6">
+                            <div className="flex items-center justify-between px-3 mb-2">
+                                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                                    Workspaces
+                                </span>
+                                <Link
+                                    href="/dashboard"
+                                    className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
+                                    title="Add workspace"
+                                >
+                                    <Plus className="w-3.5 h-3.5 text-zinc-400" />
+                                </Link>
+                            </div>
+
+                            {loadingWorkspaces ? (
+                                <div className="flex items-center justify-center py-4">
+                                    <Loader2 className="w-4 h-4 text-zinc-400 animate-spin" />
+                                </div>
+                            ) : workspaces.length > 0 ? (
+                                <nav className="space-y-1">
+                                    {workspaces.slice(0, 5).map((workspace) => (
+                                        <Link
+                                            key={workspace.id}
+                                            href={`/dashboard/workspace/${workspace.id}`}
+                                            onClick={() => setIsMobileOpen(false)}
+                                            className={`
+                                                group flex items-center gap-3 w-full px-3 py-2 rounded-lg
+                                                transition-all duration-200
+                                                ${pathname.includes(workspace.id)
+                                                    ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                                                    : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 hover:text-zinc-900 dark:hover:text-zinc-200"
+                                                }
+                                            `}
+                                        >
+                                            <div className="w-6 h-6 rounded bg-gradient-to-br from-zinc-600 to-zinc-800 dark:from-zinc-500 dark:to-zinc-700 flex items-center justify-center shrink-0">
+                                                <LayoutGrid className="w-3.5 h-3.5 text-white" />
+                                            </div>
+                                            <span className="text-sm font-medium truncate">
+                                                {workspace.name}
+                                            </span>
+                                        </Link>
+                                    ))}
+                                </nav>
+                            ) : (
+                                <p className="px-3 py-2 text-xs text-zinc-400 dark:text-zinc-500">
+                                    No workspaces yet
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Collapsed workspace icons */}
+                    {isCollapsed && workspaces.length > 0 && (
+                        <div className="mt-6 space-y-2">
+                            {workspaces.slice(0, 3).map((workspace) => (
+                                <Link
+                                    key={workspace.id}
+                                    href={`/dashboard/workspace/${workspace.id}`}
+                                    className={`
+                                        flex items-center justify-center p-2 rounded-lg
+                                        transition-all duration-200
+                                        ${pathname.includes(workspace.id)
+                                            ? "bg-zinc-200 dark:bg-zinc-800"
+                                            : "hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
+                                        }
+                                    `}
+                                    title={workspace.name}
+                                >
+                                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-zinc-600 to-zinc-800 dark:from-zinc-500 dark:to-zinc-700 flex items-center justify-center">
+                                        <span className="text-xs font-bold text-white">
+                                            {workspace.name[0]?.toUpperCase()}
+                                        </span>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Bottom Navigation */}
@@ -141,7 +251,7 @@ export default function Sidebar() {
                             label={item.label}
                             href={item.href}
                             isCollapsed={isCollapsed}
-                            isActive={pathname === item.href}
+                            isActive={isActive(item.href)}
                             onMobileClick={() => setIsMobileOpen(false)}
                         />
                     ))}
