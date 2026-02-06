@@ -4,14 +4,14 @@ import React, { useEffect, useState } from "react";
 import {
     FolderKanban,
     Plus,
-    ArrowRight,
     Sparkles,
     Loader2,
     LayoutGrid
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { syncCurrentUser, createWorkspace, getBoards } from "@/lib/actions";
+import { syncCurrentUser, createWorkspace, createBoard, getBoards } from "@/lib/actions";
 import { useWorkspaces } from "@/lib/context/WorkspaceContext";
 import type { Board, Workspace } from "@/lib/types/database";
 
@@ -20,8 +20,34 @@ export default function DashboardPage() {
     const [boards, setBoards] = useState<Board[]>([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
-    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showCreateWorkspaceModal, setShowCreateWorkspaceModal] = useState(false);
+    const [showCreateBoardModal, setShowCreateBoardModal] = useState(false);
     const [newWorkspaceName, setNewWorkspaceName] = useState("");
+    const [newBoardName, setNewBoardName] = useState("");
+    const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
+    const [newBoardColor, setNewBoardColor] = useState("#3b82f6");
+
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
+    // Handle URL query params for create actions
+    useEffect(() => {
+        const createType = searchParams.get("create");
+        if (createType === "workspace") {
+            setShowCreateWorkspaceModal(true);
+            // Clear the query param
+            router.replace("/dashboard", { scroll: false });
+        } else if (createType === "board") {
+            if (workspaces.length > 0) {
+                setSelectedWorkspaceId(workspaces[0].id);
+                setShowCreateBoardModal(true);
+            } else {
+                toast.error("Create a workspace first before adding a board");
+                setShowCreateWorkspaceModal(true);
+            }
+            router.replace("/dashboard", { scroll: false });
+        }
+    }, [searchParams, router, workspaces]);
 
     // Sync user and fetch boards on mount
     useEffect(() => {
@@ -54,10 +80,9 @@ export default function DashboardPage() {
         try {
             const workspace = await createWorkspace({ name: newWorkspaceName });
             if (workspace) {
-                // Update global context - sidebar will update automatically
                 addWorkspace(workspace);
                 setNewWorkspaceName("");
-                setShowCreateModal(false);
+                setShowCreateWorkspaceModal(false);
                 toast.success("Workspace created successfully");
             } else {
                 toast.error("Failed to create workspace. Please try again.");
@@ -65,6 +90,33 @@ export default function DashboardPage() {
         } catch (error) {
             console.error("Error creating workspace:", error);
             toast.error("Failed to create workspace. Please try again.");
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    const handleCreateBoard = async () => {
+        if (!newBoardName.trim() || !selectedWorkspaceId) return;
+
+        setCreating(true);
+        try {
+            const board = await createBoard({
+                workspace_id: selectedWorkspaceId,
+                name: newBoardName,
+                background_color: newBoardColor,
+            });
+            if (board) {
+                setNewBoardName("");
+                setShowCreateBoardModal(false);
+                toast.success("Board created successfully");
+                // Navigate to the new board
+                router.push(`/dashboard/board/${board.id}`);
+            } else {
+                toast.error("Failed to create board. Please try again.");
+            }
+        } catch (error) {
+            console.error("Error creating board:", error);
+            toast.error("Failed to create board. Please try again.");
         } finally {
             setCreating(false);
         }
@@ -82,6 +134,11 @@ export default function DashboardPage() {
 
     const hasContent = workspaces.length > 0 || boards.length > 0;
 
+    const boardColors = [
+        "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
+        "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
+    ];
+
     return (
         <div className="flex flex-col h-full bg-white dark:bg-black transition-colors duration-200">
             {/* Page Header */}
@@ -90,13 +147,6 @@ export default function DashboardPage() {
                     <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Dashboard</h1>
                     <p className="text-sm text-zinc-500 mt-0.5">Welcome back to your workspace</p>
                 </div>
-                <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg font-medium text-sm hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-all"
-                >
-                    <Plus className="w-4 h-4" />
-                    New Workspace
-                </button>
             </div>
 
             {/* Main Content Area */}
@@ -123,7 +173,7 @@ export default function DashboardPage() {
 
                         <div className="flex flex-col sm:flex-row items-center gap-3">
                             <button
-                                onClick={() => setShowCreateModal(true)}
+                                onClick={() => setShowCreateWorkspaceModal(true)}
                                 className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg font-medium text-sm hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-all hover:scale-[1.02]"
                             >
                                 <Plus className="w-4 h-4" />
@@ -146,7 +196,7 @@ export default function DashboardPage() {
 
                                 {/* Add Workspace Card */}
                                 <button
-                                    onClick={() => setShowCreateModal(true)}
+                                    onClick={() => setShowCreateWorkspaceModal(true)}
                                     className="group flex flex-col items-center justify-center p-6 bg-zinc-50 dark:bg-zinc-900/50 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all min-h-35"
                                 >
                                     <div className="w-10 h-10 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
@@ -184,11 +234,11 @@ export default function DashboardPage() {
             </div>
 
             {/* Create Workspace Modal */}
-            {showCreateModal && (
+            {showCreateWorkspaceModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
                     <div
                         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                        onClick={() => setShowCreateModal(false)}
+                        onClick={() => setShowCreateWorkspaceModal(false)}
                     />
                     <div className="relative bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 w-full max-w-md shadow-2xl">
                         <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
@@ -205,7 +255,7 @@ export default function DashboardPage() {
                         />
                         <div className="flex justify-end gap-3">
                             <button
-                                onClick={() => setShowCreateModal(false)}
+                                onClick={() => setShowCreateWorkspaceModal(false)}
                                 className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
                             >
                                 Cancel
@@ -217,6 +267,86 @@ export default function DashboardPage() {
                             >
                                 {creating && <Loader2 className="w-4 h-4 animate-spin" />}
                                 Create
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Create Board Modal */}
+            {showCreateBoardModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div
+                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                        onClick={() => setShowCreateBoardModal(false)}
+                    />
+                    <div className="relative bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 w-full max-w-md shadow-2xl">
+                        <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+                            Create Board
+                        </h3>
+
+                        {/* Board Name */}
+                        <input
+                            type="text"
+                            placeholder="Board name..."
+                            value={newBoardName}
+                            onChange={(e) => setNewBoardName(e.target.value)}
+                            className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-600 mb-4"
+                            autoFocus
+                        />
+
+                        {/* Workspace Selection */}
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                                Workspace
+                            </label>
+                            <select
+                                value={selectedWorkspaceId}
+                                onChange={(e) => setSelectedWorkspaceId(e.target.value)}
+                                className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-600"
+                            >
+                                {workspaces.map((ws) => (
+                                    <option key={ws.id} value={ws.id}>
+                                        {ws.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Color Selection */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                                Background Color
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                                {boardColors.map((color) => (
+                                    <button
+                                        key={color}
+                                        onClick={() => setNewBoardColor(color)}
+                                        className={`w-8 h-8 rounded-lg transition-all ${newBoardColor === color
+                                                ? "ring-2 ring-offset-2 ring-zinc-500 dark:ring-offset-zinc-900 scale-110"
+                                                : "hover:scale-105"
+                                            }`}
+                                        style={{ backgroundColor: color }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowCreateBoardModal(false)}
+                                className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleCreateBoard}
+                                disabled={!newBoardName.trim() || !selectedWorkspaceId || creating}
+                                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg font-medium text-sm hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {creating && <Loader2 className="w-4 h-4 animate-spin" />}
+                                Create Board
                             </button>
                         </div>
                     </div>

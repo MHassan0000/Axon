@@ -136,3 +136,68 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* =====================================================
+   Custom Scrollbar Styles - Minimal & Theme-Aware
+   ===================================================== */
+
+/* Global scrollbar settings */
+*,
+*::before,
+*::after {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(100, 100, 100, 0.3) transparent !important;
+}
+
+/* Webkit Scrollbar (Chrome, Safari, Edge) */
+*::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(100, 100, 100, 0.3) !important;
+  border-radius: 10px !important;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 100, 100, 0.5) !important;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+
+/* Dark Mode Scrollbars */
+.dark *,
+.dark *::before,
+.dark *::after {
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent !important;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Light Mode Scrollbars */
+:root:not(.dark) *,
+:root:not(.dark) *::before,
+:root:not(.dark) *::after {
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent !important;
+}
+
+:root:not(.dark) *::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1) !important;
+}
+
+:root:not(.dark) *::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2) !important;
+}

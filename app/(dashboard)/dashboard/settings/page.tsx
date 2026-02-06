@@ -91,14 +91,7 @@ export default function SettingsPage() {
                                     {user?.primaryEmailAddress?.emailAddress}
                                 </p>
                             </div>
-                            <a
-                                href="/user"
-                                target="_blank"
-                                className="flex items-center gap-2 px-4 py-2 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 transition-colors"
-                            >
-                                Edit Profile
-                                <ExternalLink className="w-4 h-4" />
-                            </a>
+
                         </div>
                     </section>
 
