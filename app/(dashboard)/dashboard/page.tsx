@@ -98,7 +98,7 @@ export default function DashboardPage() {
             <div className="flex-1 overflow-auto p-6">
                 {!hasContent ? (
                     /* Empty State */
-                    <div className="flex flex-col items-center justify-center h-full min-h-[400px]">
+                    <div className="flex flex-col items-center justify-center h-full min-h-100">
                         <div className="relative mb-6">
                             <div className="w-20 h-20 rounded-2xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center">
                                 <FolderKanban className="w-10 h-10 text-zinc-400 dark:text-zinc-600" />
@@ -146,7 +146,7 @@ export default function DashboardPage() {
                                 {/* Add Workspace Card */}
                                 <button
                                     onClick={() => setShowCreateModal(true)}
-                                    className="group flex flex-col items-center justify-center p-6 bg-zinc-50 dark:bg-zinc-900/50 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all min-h-[140px]"
+                                    className="group flex flex-col items-center justify-center p-6 bg-zinc-50 dark:bg-zinc-900/50 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all min-h-35"
                                 >
                                     <div className="w-10 h-10 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                         <Plus className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
@@ -233,7 +233,7 @@ function WorkspaceCard({ workspace }: { workspace: Workspace }) {
             className="group flex flex-col p-5 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-lg dark:hover:shadow-zinc-900/50 transition-all"
         >
             <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-zinc-700 to-zinc-900 dark:from-zinc-600 dark:to-zinc-800 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-linear-to-br from-zinc-700 to-zinc-900 dark:from-zinc-600 dark:to-zinc-800 flex items-center justify-center">
                     <LayoutGrid className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -262,7 +262,7 @@ function BoardCard({ board }: { board: Board }) {
             className="group relative overflow-hidden p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-lg transition-all"
             style={{ backgroundColor: board.background_color || "#1f1f23" }}
         >
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
             <div className="relative z-10">
                 <h3 className="font-semibold text-white mb-1 group-hover:scale-[1.02] transition-transform origin-left">
                     {board.name}

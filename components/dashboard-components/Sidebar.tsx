@@ -98,7 +98,7 @@ export default function Sidebar() {
                     fixed lg:relative z-50 lg:z-auto
                     flex flex-col bg-zinc-50 dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800/80
                     h-full transition-all duration-300 ease-out
-                    ${isCollapsed ? "lg:w-[72px]" : "lg:w-64"}
+                    ${isCollapsed ? "lg:w-18" : "lg:w-64"}
                     ${isMobileOpen ? "translate-x-0 w-72" : "-translate-x-full lg:translate-x-0"}
                 `}
             >
@@ -197,7 +197,7 @@ export default function Sidebar() {
                                                 }
                                             `}
                                         >
-                                            <div className="w-6 h-6 rounded bg-gradient-to-br from-zinc-600 to-zinc-800 dark:from-zinc-500 dark:to-zinc-700 flex items-center justify-center shrink-0">
+                                            <div className="w-6 h-6 rounded bg-linear-to-br from-zinc-600 to-zinc-800 dark:from-zinc-500 dark:to-zinc-700 flex items-center justify-center shrink-0">
                                                 <LayoutGrid className="w-3.5 h-3.5 text-white" />
                                             </div>
                                             <span className="text-sm font-medium truncate">
@@ -231,7 +231,7 @@ export default function Sidebar() {
                                     `}
                                     title={workspace.name}
                                 >
-                                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-zinc-600 to-zinc-800 dark:from-zinc-500 dark:to-zinc-700 flex items-center justify-center">
+                                    <div className="w-8 h-8 rounded-lg bg-linear-to-br from-zinc-600 to-zinc-800 dark:from-zinc-500 dark:to-zinc-700 flex items-center justify-center">
                                         <span className="text-xs font-bold text-white">
                                             {workspace.name[0]?.toUpperCase()}
                                         </span>
