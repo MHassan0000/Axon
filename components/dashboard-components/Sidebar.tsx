@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
     LayoutDashboard,
     Settings,
@@ -19,7 +19,7 @@ import {
     Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useWorkspaces } from "@/lib/context/WorkspaceContext";
 
 interface NavItem {
@@ -47,6 +47,20 @@ export default function Sidebar() {
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const { workspaces, loading: loadingWorkspaces } = useWorkspaces();
     const pathname = usePathname();
+    const router = useRouter();
+
+    // Prefetch common routes on mount for faster navigation
+    useEffect(() => {
+        // Prefetch main navigation routes
+        mainNavItems.forEach((item) => {
+            router.prefetch(item.href);
+        });
+        
+        // Prefetch workspace routes
+        workspaces.slice(0, 5).forEach((workspace) => {
+            router.prefetch(`/dashboard/workspace/${workspace.id}`);
+        });
+    }, [router, workspaces]);
 
     // Check if path matches or starts with href (for nested routes)
     const isActive = (href: string) => {

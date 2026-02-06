@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import {
     Search,
     Plus,
@@ -15,8 +15,18 @@ import Image from "next/image";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { GlobalSearch } from "./GlobalSearch";
+import { LazyGlobalSearch } from "./LazyComponents";
 import NotificationBell from "@/components/notifications/NotificationBell";
+
+// Placeholder for lazy-loaded search
+function SearchPlaceholder() {
+    return (
+        <div className="flex items-center gap-2 w-full max-w-md px-3 py-2 bg-zinc-100 dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800">
+            <Search className="w-4 h-4 text-zinc-400" />
+            <span className="text-sm text-zinc-400">Search...</span>
+        </div>
+    );
+}
 
 export default function DashboardNav() {
     const [isDark, setIsDark] = useState(true);
@@ -152,7 +162,9 @@ export default function DashboardNav() {
 
                 {/* Center Section - Search */}
                 <div className="flex-1 max-w-md mx-4 hidden sm:flex justify-center">
-                    <GlobalSearch />
+                    <Suspense fallback={<SearchPlaceholder />}>
+                        <LazyGlobalSearch />
+                    </Suspense>
                 </div>
 
                 {/* Right Section - Actions & User */}
