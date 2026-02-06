@@ -7,7 +7,7 @@ export default function DashboardPage() {
     return (
         <div className="flex flex-col h-full bg-white dark:bg-black transition-colors duration-200">
             {/* Page Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/80">
+            <div className="flex items-center justify-center px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/80 text-center">
                 <div>
                     <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Dashboard</h1>
                     <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-0.5">Welcome back to your workspace</p>
