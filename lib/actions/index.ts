@@ -7,7 +7,6 @@
 export { 
   syncCurrentUser, 
   getCurrentUser, 
-  getUserById, 
   searchUsers 
 } from "./users";
 
@@ -37,7 +36,6 @@ export {
 // List actions
 export {
   createList,
-  getLists,
   updateList,
   deleteList,
   reorderLists,

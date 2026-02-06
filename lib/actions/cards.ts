@@ -383,6 +383,24 @@ export async function addComment(input: CreateCommentInput): Promise<Comment | n
     return null;
   }
 
+  // Log activity
+  const { data: card } = await supabase
+    .from("cards")
+    .select("list_id, lists!inner(board_id)")
+    .eq("id", input.card_id)
+    .single();
+
+  if (card) {
+    const cardData = card as unknown as { list_id: string; lists: { board_id: string } };
+    await supabase.from("activity_log").insert({
+      card_id: input.card_id,
+      board_id: cardData.lists.board_id,
+      user_id: user.id,
+      action: "commented",
+      details: { preview: input.content.slice(0, 50) },
+    });
+  }
+
   return comment;
 }
 

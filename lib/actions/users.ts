@@ -101,26 +101,6 @@ export async function getCurrentUser(): Promise<User | null> {
 }
 
 /**
- * Get user by their Supabase ID
- */
-export async function getUserById(userId: string): Promise<User | null> {
-  const supabase = await createClient();
-
-  const { data: user, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", userId)
-    .single();
-
-  if (error) {
-    console.error("Error fetching user:", error);
-    return null;
-  }
-
-  return user;
-}
-
-/**
  * Search users by name or email (for assigning to cards)
  */
 export async function searchUsers(query: string, limit = 10): Promise<User[]> {

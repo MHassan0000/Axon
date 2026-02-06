@@ -52,26 +52,6 @@ export async function createList(input: CreateListInput): Promise<List | null> {
 }
 
 /**
- * Get all lists for a board
- */
-export async function getLists(boardId: string): Promise<List[]> {
-  const supabase = await createClient();
-
-  const { data: lists, error } = await supabase
-    .from("lists")
-    .select("*")
-    .eq("board_id", boardId)
-    .order("position", { ascending: true });
-
-  if (error) {
-    console.error("Error fetching lists:", error);
-    return [];
-  }
-
-  return lists;
-}
-
-/**
  * Update a list
  */
 export async function updateList(

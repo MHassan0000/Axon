@@ -9,15 +9,20 @@ import {
     Loader2,
     ChevronDown,
     ChevronRight,
+    Pencil,
+    Check,
+    X,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
     createChecklist,
     getChecklists,
     deleteChecklist,
+    updateChecklist,
     addChecklistItem,
     toggleChecklistItem,
     deleteChecklistItem,
+    updateChecklistItem,
 } from "@/lib/actions";
 import type { ChecklistWithItems } from "@/lib/types/database";
 
@@ -31,6 +36,10 @@ export function ChecklistSection({ cardId }: ChecklistSectionProps) {
     const [addingChecklist, setAddingChecklist] = useState(false);
     const [newItemInputs, setNewItemInputs] = useState<Record<string, string>>({});
     const [collapsedChecklists, setCollapsedChecklists] = useState<Set<string>>(new Set());
+    const [editingChecklistId, setEditingChecklistId] = useState<string | null>(null);
+    const [editChecklistTitle, setEditChecklistTitle] = useState("");
+    const [editingItemId, setEditingItemId] = useState<string | null>(null);
+    const [editItemTitle, setEditItemTitle] = useState("");
 
     // Fetch checklists on mount
     useEffect(() => {
@@ -75,6 +84,26 @@ export function ChecklistSection({ cardId }: ChecklistSectionProps) {
         } catch (error) {
             console.error("Error deleting checklist:", error);
             toast.error("Failed to delete checklist");
+        }
+    };
+
+    // Update checklist title
+    const handleUpdateChecklist = async (checklistId: string) => {
+        if (!editChecklistTitle.trim()) return;
+        try {
+            const success = await updateChecklist(checklistId, editChecklistTitle.trim());
+            if (success) {
+                setChecklists(
+                    checklists.map((c) =>
+                        c.id === checklistId ? { ...c, title: editChecklistTitle.trim() } : c
+                    )
+                );
+                setEditingChecklistId(null);
+                toast.success("Checklist updated");
+            }
+        } catch (error) {
+            console.error("Error updating checklist:", error);
+            toast.error("Failed to update checklist");
         }
     };
 
@@ -138,6 +167,32 @@ export function ChecklistSection({ cardId }: ChecklistSectionProps) {
         }
     };
 
+    // Update item title
+    const handleUpdateItem = async (checklistId: string, itemId: string) => {
+        if (!editItemTitle.trim()) return;
+        try {
+            const success = await updateChecklistItem(itemId, editItemTitle.trim());
+            if (success) {
+                setChecklists(
+                    checklists.map((c) =>
+                        c.id === checklistId
+                            ? {
+                                ...c,
+                                items: c.items.map((item) =>
+                                    item.id === itemId ? { ...item, title: editItemTitle.trim() } : item
+                                ),
+                            }
+                            : c
+                    )
+                );
+                setEditingItemId(null);
+            }
+        } catch (error) {
+            console.error("Error updating item:", error);
+            toast.error("Failed to update item");
+        }
+    };
+
     // Toggle collapse
     const toggleCollapse = (checklistId: string) => {
         const newSet = new Set(collapsedChecklists);
@@ -195,6 +250,7 @@ export function ChecklistSection({ cardId }: ChecklistSectionProps) {
                     {checklists.map((checklist) => {
                         const progress = getProgress(checklist.items);
                         const isCollapsed = collapsedChecklists.has(checklist.id);
+                        const isEditingTitle = editingChecklistId === checklist.id;
 
                         return (
                             <div
@@ -203,27 +259,68 @@ export function ChecklistSection({ cardId }: ChecklistSectionProps) {
                             >
                                 {/* Checklist Header */}
                                 <div className="flex items-center justify-between mb-2">
-                                    <button
-                                        onClick={() => toggleCollapse(checklist.id)}
-                                        className="flex items-center gap-2 text-sm font-medium text-zinc-800 dark:text-zinc-200"
-                                    >
-                                        {isCollapsed ? (
-                                            <ChevronRight className="w-4 h-4" />
-                                        ) : (
-                                            <ChevronDown className="w-4 h-4" />
-                                        )}
-                                        {checklist.title}
-                                        <span className="text-xs text-zinc-500">
-                                            ({checklist.items.filter((i) => i.is_complete).length}/
-                                            {checklist.items.length})
-                                        </span>
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteChecklist(checklist.id)}
-                                        className="p-1 text-zinc-400 hover:text-red-500 transition-colors"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
+                                    {isEditingTitle ? (
+                                        <div className="flex items-center gap-2 flex-1">
+                                            <input
+                                                type="text"
+                                                value={editChecklistTitle}
+                                                onChange={(e) => setEditChecklistTitle(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") handleUpdateChecklist(checklist.id);
+                                                    if (e.key === "Escape") setEditingChecklistId(null);
+                                                }}
+                                                className="flex-1 px-2 py-1 text-sm bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                autoFocus
+                                            />
+                                            <button
+                                                onClick={() => handleUpdateChecklist(checklist.id)}
+                                                className="p-1 text-emerald-500 hover:text-emerald-600"
+                                            >
+                                                <Check className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => setEditingChecklistId(null)}
+                                                className="p-1 text-zinc-400 hover:text-zinc-500"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => toggleCollapse(checklist.id)}
+                                            className="flex items-center gap-2 text-sm font-medium text-zinc-800 dark:text-zinc-200"
+                                        >
+                                            {isCollapsed ? (
+                                                <ChevronRight className="w-4 h-4" />
+                                            ) : (
+                                                <ChevronDown className="w-4 h-4" />
+                                            )}
+                                            {checklist.title}
+                                            <span className="text-xs text-zinc-500">
+                                                ({checklist.items.filter((i) => i.is_complete).length}/
+                                                {checklist.items.length})
+                                            </span>
+                                        </button>
+                                    )}
+                                    {!isEditingTitle && (
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                onClick={() => {
+                                                    setEditingChecklistId(checklist.id);
+                                                    setEditChecklistTitle(checklist.title);
+                                                }}
+                                                className="p-1 text-zinc-400 hover:text-blue-500 transition-colors"
+                                            >
+                                                <Pencil className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteChecklist(checklist.id)}
+                                                className="p-1 text-zinc-400 hover:text-red-500 transition-colors"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Progress Bar */}
@@ -238,45 +335,92 @@ export function ChecklistSection({ cardId }: ChecklistSectionProps) {
                                 {!isCollapsed && (
                                     <>
                                         <div className="space-y-1.5">
-                                            {checklist.items.map((item) => (
-                                                <div
-                                                    key={item.id}
-                                                    className="flex items-center gap-2 group"
-                                                >
-                                                    <button
-                                                        onClick={() =>
-                                                            handleToggleItem(
-                                                                checklist.id,
-                                                                item.id,
-                                                                item.is_complete
-                                                            )
-                                                        }
-                                                        className="shrink-0"
+                                            {checklist.items.map((item) => {
+                                                const isEditingItem = editingItemId === item.id;
+
+                                                return (
+                                                    <div
+                                                        key={item.id}
+                                                        className="flex items-center gap-2 group"
                                                     >
-                                                        {item.is_complete ? (
-                                                            <CheckSquare className="w-4 h-4 text-emerald-500" />
+                                                        <button
+                                                            onClick={() =>
+                                                                handleToggleItem(
+                                                                    checklist.id,
+                                                                    item.id,
+                                                                    item.is_complete
+                                                                )
+                                                            }
+                                                            className="shrink-0"
+                                                        >
+                                                            {item.is_complete ? (
+                                                                <CheckSquare className="w-4 h-4 text-emerald-500" />
+                                                            ) : (
+                                                                <Square className="w-4 h-4 text-zinc-400" />
+                                                            )}
+                                                        </button>
+                                                        {isEditingItem ? (
+                                                            <div className="flex items-center gap-2 flex-1">
+                                                                <input
+                                                                    type="text"
+                                                                    value={editItemTitle}
+                                                                    onChange={(e) => setEditItemTitle(e.target.value)}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === "Enter") handleUpdateItem(checklist.id, item.id);
+                                                                        if (e.key === "Escape") setEditingItemId(null);
+                                                                    }}
+                                                                    className="flex-1 px-2 py-0.5 text-sm bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                    autoFocus
+                                                                />
+                                                                <button
+                                                                    onClick={() => handleUpdateItem(checklist.id, item.id)}
+                                                                    className="p-0.5 text-emerald-500 hover:text-emerald-600"
+                                                                >
+                                                                    <Check className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setEditingItemId(null)}
+                                                                    className="p-0.5 text-zinc-400 hover:text-zinc-500"
+                                                                >
+                                                                    <X className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
                                                         ) : (
-                                                            <Square className="w-4 h-4 text-zinc-400" />
+                                                            <>
+                                                                <span
+                                                                    className={`flex-1 text-sm cursor-pointer ${item.is_complete
+                                                                        ? "text-zinc-400 line-through"
+                                                                        : "text-zinc-700 dark:text-zinc-300"
+                                                                        }`}
+                                                                    onDoubleClick={() => {
+                                                                        setEditingItemId(item.id);
+                                                                        setEditItemTitle(item.title);
+                                                                    }}
+                                                                >
+                                                                    {item.title}
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditingItemId(item.id);
+                                                                        setEditItemTitle(item.title);
+                                                                    }}
+                                                                    className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-blue-500 transition-all"
+                                                                >
+                                                                    <Pencil className="w-3 h-3" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() =>
+                                                                        handleDeleteItem(checklist.id, item.id)
+                                                                    }
+                                                                    className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 transition-all"
+                                                                >
+                                                                    <Trash2 className="w-3 h-3" />
+                                                                </button>
+                                                            </>
                                                         )}
-                                                    </button>
-                                                    <span
-                                                        className={`flex-1 text-sm ${item.is_complete
-                                                                ? "text-zinc-400 line-through"
-                                                                : "text-zinc-700 dark:text-zinc-300"
-                                                            }`}
-                                                    >
-                                                        {item.title}
-                                                    </span>
-                                                    <button
-                                                        onClick={() =>
-                                                            handleDeleteItem(checklist.id, item.id)
-                                                        }
-                                                        className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 transition-all"
-                                                    >
-                                                        <Trash2 className="w-3 h-3" />
-                                                    </button>
-                                                </div>
-                                            ))}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
 
                                         {/* Add Item Input */}
