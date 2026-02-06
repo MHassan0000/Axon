@@ -1,0 +1,437 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "./users";
+import type { 
+  Card, 
+  CardWithRelations,
+  CreateCardInput,
+  UpdateCardInput,
+  Comment,
+  CreateCommentInput
+} from "@/lib/types/database";
+
+/**
+ * Create a new card
+ */
+export async function createCard(input: CreateCardInput): Promise<Card | null> {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    console.error("User not authenticated");
+    return null;
+  }
+
+  const supabase = await createClient();
+
+  // Get the next position in the list
+  const { data: lastCard } = await supabase
+    .from("cards")
+    .select("position")
+    .eq("list_id", input.list_id)
+    .order("position", { ascending: false })
+    .limit(1)
+    .single();
+
+  const position = lastCard ? lastCard.position + 1 : 0;
+
+  const { data: card, error } = await supabase
+    .from("cards")
+    .insert({
+      list_id: input.list_id,
+      title: input.title,
+      description: input.description || null,
+      due_date: input.due_date || null,
+      position,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating card:", error);
+    return null;
+  }
+
+  // Log activity
+  const { data: list } = await supabase
+    .from("lists")
+    .select("board_id")
+    .eq("id", input.list_id)
+    .single();
+
+  if (list) {
+    await supabase.from("activity_log").insert({
+      card_id: card.id,
+      board_id: list.board_id,
+      user_id: user.id,
+      action: "created",
+      details: { title: card.title },
+    });
+  }
+
+  return card;
+}
+
+/**
+ * Get a card with all its relations
+ */
+export async function getCard(cardId: string): Promise<CardWithRelations | null> {
+  const supabase = await createClient();
+
+  const { data: card, error } = await supabase
+    .from("cards")
+    .select("*")
+    .eq("id", cardId)
+    .single();
+
+  if (error || !card) {
+    console.error("Error fetching card:", error);
+    return null;
+  }
+
+  // Get labels
+  const { data: cardLabels } = await supabase
+    .from("card_labels")
+    .select("*, labels(*)")
+    .eq("card_id", cardId);
+
+  // Get assignees
+  const { data: cardAssignees } = await supabase
+    .from("card_assignees")
+    .select("*, users(*)")
+    .eq("card_id", cardId);
+
+  // Get comment count
+  const { count: commentsCount } = await supabase
+    .from("comments")
+    .select("*", { count: "exact", head: true })
+    .eq("card_id", cardId);
+
+  // Get attachment count
+  const { count: attachmentsCount } = await supabase
+    .from("attachments")
+    .select("*", { count: "exact", head: true })
+    .eq("card_id", cardId);
+
+  return {
+    ...card,
+    labels: cardLabels?.map((cl) => cl.labels).filter(Boolean) || [],
+    assignees: cardAssignees?.map((ca) => ca.users).filter(Boolean) || [],
+    comments_count: commentsCount || 0,
+    attachments_count: attachmentsCount || 0,
+  };
+}
+
+/**
+ * Update a card
+ */
+export async function updateCard(
+  cardId: string,
+  input: UpdateCardInput
+): Promise<Card | null> {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    return null;
+  }
+
+  const supabase = await createClient();
+
+  // If moving to a different list, update position
+  if (input.list_id) {
+    const { data: lastCard } = await supabase
+      .from("cards")
+      .select("position")
+      .eq("list_id", input.list_id)
+      .order("position", { ascending: false })
+      .limit(1)
+      .single();
+
+    input.position = lastCard ? lastCard.position + 1 : 0;
+  }
+
+  const { data: card, error } = await supabase
+    .from("cards")
+    .update(input)
+    .eq("id", cardId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating card:", error);
+    return null;
+  }
+
+  return card;
+}
+
+/**
+ * Delete a card
+ */
+export async function deleteCard(cardId: string): Promise<boolean> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("cards")
+    .delete()
+    .eq("id", cardId);
+
+  if (error) {
+    console.error("Error deleting card:", error);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Move a card to a different list and/or position
+ */
+export async function moveCard(
+  cardId: string,
+  toListId: string,
+  position: number
+): Promise<boolean> {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    return false;
+  }
+
+  const supabase = await createClient();
+
+  // Get original card info for activity log
+  const { data: originalCard } = await supabase
+    .from("cards")
+    .select("*, lists(name, board_id)")
+    .eq("id", cardId)
+    .single();
+
+  // Update the card's list and position
+  const { error } = await supabase
+    .from("cards")
+    .update({ list_id: toListId, position })
+    .eq("id", cardId);
+
+  if (error) {
+    console.error("Error moving card:", error);
+    return false;
+  }
+
+  // Get new list name for activity log
+  const { data: newList } = await supabase
+    .from("lists")
+    .select("name, board_id")
+    .eq("id", toListId)
+    .single();
+
+  // Log activity if list changed
+  if (originalCard?.list_id !== toListId && newList) {
+    await supabase.from("activity_log").insert({
+      card_id: cardId,
+      board_id: newList.board_id,
+      user_id: user.id,
+      action: "moved",
+      details: {
+        from: originalCard?.lists?.name,
+        to: newList.name,
+      },
+    });
+  }
+
+  return true;
+}
+
+/**
+ * Reorder cards within a list
+ */
+export async function reorderCards(
+  listId: string,
+  cardIds: string[]
+): Promise<boolean> {
+  const supabase = await createClient();
+
+  const updates = cardIds.map((id, index) =>
+    supabase
+      .from("cards")
+      .update({ position: index })
+      .eq("id", id)
+      .eq("list_id", listId)
+  );
+
+  try {
+    await Promise.all(updates);
+    return true;
+  } catch (error) {
+    console.error("Error reordering cards:", error);
+    return false;
+  }
+}
+
+/**
+ * Add a label to a card
+ */
+export async function addLabelToCard(
+  cardId: string,
+  labelId: string
+): Promise<boolean> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("card_labels")
+    .insert({ card_id: cardId, label_id: labelId });
+
+  if (error) {
+    console.error("Error adding label:", error);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Remove a label from a card
+ */
+export async function removeLabelFromCard(
+  cardId: string,
+  labelId: string
+): Promise<boolean> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("card_labels")
+    .delete()
+    .eq("card_id", cardId)
+    .eq("label_id", labelId);
+
+  if (error) {
+    console.error("Error removing label:", error);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Assign a user to a card
+ */
+export async function assignUserToCard(
+  cardId: string,
+  userId: string
+): Promise<boolean> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("card_assignees")
+    .insert({ card_id: cardId, user_id: userId });
+
+  if (error) {
+    console.error("Error assigning user:", error);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Unassign a user from a card
+ */
+export async function unassignUserFromCard(
+  cardId: string,
+  userId: string
+): Promise<boolean> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("card_assignees")
+    .delete()
+    .eq("card_id", cardId)
+    .eq("user_id", userId);
+
+  if (error) {
+    console.error("Error unassigning user:", error);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Add a comment to a card
+ */
+export async function addComment(input: CreateCommentInput): Promise<Comment | null> {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    return null;
+  }
+
+  const supabase = await createClient();
+
+  const { data: comment, error } = await supabase
+    .from("comments")
+    .insert({
+      card_id: input.card_id,
+      user_id: user.id,
+      content: input.content,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error adding comment:", error);
+    return null;
+  }
+
+  return comment;
+}
+
+/**
+ * Get comments for a card
+ */
+export async function getComments(cardId: string): Promise<(Comment & { user: { name: string; avatar_url: string } })[]> {
+  const supabase = await createClient();
+
+  const { data: comments, error } = await supabase
+    .from("comments")
+    .select("*, users(name, avatar_url)")
+    .eq("card_id", cardId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching comments:", error);
+    return [];
+  }
+
+  return comments.map((c) => ({
+    ...c,
+    user: c.users,
+  }));
+}
+
+/**
+ * Delete a comment
+ */
+export async function deleteComment(commentId: string): Promise<boolean> {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    return false;
+  }
+
+  const supabase = await createClient();
+
+  // Only allow deleting own comments
+  const { error } = await supabase
+    .from("comments")
+    .delete()
+    .eq("id", commentId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    console.error("Error deleting comment:", error);
+    return false;
+  }
+
+  return true;
+}

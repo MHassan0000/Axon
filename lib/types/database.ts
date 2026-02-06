@@ -1,0 +1,200 @@
+// =====================================================
+// Axon Trello Clone - Database Types
+// =====================================================
+
+export interface User {
+  id: string;
+  clerk_id: string;
+  email: string;
+  name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Workspace {
+  id: string;
+  name: string;
+  description: string | null;
+  owner_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkspaceMember {
+  workspace_id: string;
+  user_id: string;
+  role: 'owner' | 'admin' | 'member';
+  joined_at: string;
+}
+
+export interface Board {
+  id: string;
+  workspace_id: string;
+  name: string;
+  description: string | null;
+  is_private: boolean;
+  background_color: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface List {
+  id: string;
+  board_id: string;
+  name: string;
+  position: number;
+  color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Card {
+  id: string;
+  list_id: string;
+  title: string;
+  description: string | null;
+  position: number;
+  due_date: string | null;
+  is_complete: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Label {
+  id: string;
+  board_id: string;
+  name: string | null;
+  color: string;
+  created_at: string;
+}
+
+export interface CardLabel {
+  card_id: string;
+  label_id: string;
+}
+
+export interface CardAssignee {
+  card_id: string;
+  user_id: string;
+  assigned_at: string;
+}
+
+export interface Comment {
+  id: string;
+  card_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Attachment {
+  id: string;
+  card_id: string;
+  name: string;
+  url: string;
+  type: string | null;
+  size_bytes: number | null;
+  uploaded_by: string | null;
+  created_at: string;
+}
+
+export interface ActivityLog {
+  id: string;
+  card_id: string | null;
+  board_id: string | null;
+  user_id: string;
+  action: string;
+  details: Record<string, unknown> | null;
+  created_at: string;
+}
+
+// =====================================================
+// Extended Types with Relations
+// =====================================================
+
+export interface CardWithRelations extends Card {
+  labels?: Label[];
+  assignees?: User[];
+  comments_count?: number;
+  attachments_count?: number;
+}
+
+export interface ListWithCards extends List {
+  cards: CardWithRelations[];
+}
+
+export interface BoardWithLists extends Board {
+  lists: ListWithCards[];
+  labels?: Label[];
+}
+
+export interface WorkspaceWithBoards extends Workspace {
+  boards: Board[];
+  members?: WorkspaceMember[];
+}
+
+// =====================================================
+// Input Types for Create/Update
+// =====================================================
+
+export interface CreateBoardInput {
+  workspace_id: string;
+  name: string;
+  description?: string;
+  is_private?: boolean;
+  background_color?: string;
+}
+
+export interface UpdateBoardInput {
+  name?: string;
+  description?: string;
+  is_private?: boolean;
+  background_color?: string;
+  position?: number;
+}
+
+export interface CreateListInput {
+  board_id: string;
+  name: string;
+  color?: string;
+}
+
+export interface UpdateListInput {
+  name?: string;
+  color?: string;
+  position?: number;
+}
+
+export interface CreateCardInput {
+  list_id: string;
+  title: string;
+  description?: string;
+  due_date?: string;
+}
+
+export interface UpdateCardInput {
+  title?: string;
+  description?: string;
+  due_date?: string | null;
+  is_complete?: boolean;
+  position?: number;
+  list_id?: string; // For moving cards between lists
+}
+
+export interface CreateCommentInput {
+  card_id: string;
+  content: string;
+}
+
+export interface CreateWorkspaceInput {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateWorkspaceInput {
+  name?: string;
+  description?: string;
+}
