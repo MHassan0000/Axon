@@ -482,6 +482,35 @@ export default function BoardPage() {
                                                         }}
                                                         onCardClick={setSelectedCard}
                                                         onDeleteList={() => handleDeleteList(list.id)}
+                                                        onRenameList={async (newName) => {
+                                                            try {
+                                                                await updateList(list.id, { name: newName });
+                                                                setBoard({
+                                                                    ...board,
+                                                                    lists: board.lists.map((l) =>
+                                                                        l.id === list.id ? { ...l, name: newName } : l
+                                                                    ),
+                                                                });
+                                                                toast.success("List renamed");
+                                                            } catch (error) {
+                                                                console.error("Error renaming list:", error);
+                                                                toast.error("Failed to rename list");
+                                                            }
+                                                        }}
+                                                        onCopyList={async () => {
+                                                            try {
+                                                                const newList = await copyList(list.id);
+                                                                if (newList) {
+                                                                    // Refetch board to get updated lists with cards
+                                                                    const b = await getBoardWithLists(boardId);
+                                                                    setBoard(b);
+                                                                    toast.success("List copied");
+                                                                }
+                                                            } catch (error) {
+                                                                console.error("Error copying list:", error);
+                                                                toast.error("Failed to copy list");
+                                                            }
+                                                        }}
                                                     />
                                                 </div>
                                             )}
@@ -597,6 +626,8 @@ interface ListColumnProps {
     onCancelAdd: () => void;
     onCardClick: (card: CardWithRelations) => void;
     onDeleteList: () => void;
+    onRenameList: (newName: string) => void;
+    onCopyList: () => void;
 }
 
 function ListColumn({
@@ -610,54 +641,120 @@ function ListColumn({
     onCancelAdd,
     onCardClick,
     onDeleteList,
+    onRenameList,
+    onCopyList,
 }: ListColumnProps) {
     const [showMenu, setShowMenu] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editName, setEditName] = useState(list.name);
 
     return (
         <div className="shrink-0 w-72 flex flex-col max-h-[calc(100vh-180px)]">
             <div className="bg-zinc-100 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 flex flex-col max-h-full">
                 {/* List Header with Drag Handle */}
                 <div
-                    {...dragHandleProps}
+                    {...(isEditing ? {} : dragHandleProps)}
                     className="flex items-center justify-between px-3 py-2.5 border-b border-zinc-200 dark:border-zinc-800 cursor-grab active:cursor-grabbing"
                 >
-                    <div className="flex items-center gap-2">
-                        <GripVertical className="w-4 h-4 text-zinc-400 dark:text-zinc-600" />
-                        <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">
-                            {list.name}
-                        </h3>
-                        <span className="text-xs text-zinc-400 dark:text-zinc-500 bg-zinc-200 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
-                            {list.cards.length}
-                        </span>
-                    </div>
-                    <div className="relative">
-                        <button
-                            onClick={() => setShowMenu(!showMenu)}
-                            className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
-                        >
-                            <MoreHorizontal className="w-4 h-4 text-zinc-500" />
-                        </button>
-                        {showMenu && (
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {!isEditing && (
+                            <GripVertical className="w-4 h-4 text-zinc-400 dark:text-zinc-600 shrink-0" />
+                        )}
+                        {isEditing ? (
+                            <input
+                                type="text"
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        if (editName.trim() && editName !== list.name) {
+                                            onRenameList(editName.trim());
+                                        }
+                                        setIsEditing(false);
+                                    } else if (e.key === "Escape") {
+                                        setEditName(list.name);
+                                        setIsEditing(false);
+                                    }
+                                }}
+                                onBlur={() => {
+                                    if (editName.trim() && editName !== list.name) {
+                                        onRenameList(editName.trim());
+                                    }
+                                    setIsEditing(false);
+                                }}
+                                className="flex-1 px-2 py-1 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-400"
+                                autoFocus
+                            />
+                        ) : (
                             <>
-                                <div
-                                    className="fixed inset-0 z-10"
-                                    onClick={() => setShowMenu(false)}
-                                />
-                                <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-lg py-1 min-w-35">
-                                    <button
-                                        onClick={() => {
-                                            onDeleteList();
-                                            setShowMenu(false);
-                                        }}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                        Delete list
-                                    </button>
-                                </div>
+                                <h3
+                                    className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm truncate cursor-pointer hover:text-zinc-600 dark:hover:text-zinc-300"
+                                    onDoubleClick={() => {
+                                        setEditName(list.name);
+                                        setIsEditing(true);
+                                    }}
+                                    title="Double-click to rename"
+                                >
+                                    {list.name}
+                                </h3>
+                                <span className="text-xs text-zinc-400 dark:text-zinc-500 bg-zinc-200 dark:bg-zinc-800 px-1.5 py-0.5 rounded shrink-0">
+                                    {list.cards.length}
+                                </span>
                             </>
                         )}
                     </div>
+                    {!isEditing && (
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowMenu(!showMenu)}
+                                className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
+                            >
+                                <MoreHorizontal className="w-4 h-4 text-zinc-500" />
+                            </button>
+                            {showMenu && (
+                                <>
+                                    <div
+                                        className="fixed inset-0 z-10"
+                                        onClick={() => setShowMenu(false)}
+                                    />
+                                    <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-lg py-1 min-w-40">
+                                        <button
+                                            onClick={() => {
+                                                setEditName(list.name);
+                                                setIsEditing(true);
+                                                setShowMenu(false);
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                                        >
+                                            <Edit3 className="w-4 h-4" />
+                                            Rename list
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                onCopyList();
+                                                setShowMenu(false);
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                                        >
+                                            <Copy className="w-4 h-4" />
+                                            Copy list
+                                        </button>
+                                        <div className="border-t border-zinc-200 dark:border-zinc-700 my-1" />
+                                        <button
+                                            onClick={() => {
+                                                onDeleteList();
+                                                setShowMenu(false);
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            Delete list
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Cards with Droppable */}

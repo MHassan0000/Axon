@@ -16,9 +16,9 @@ import Image from "next/image";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { GlobalSearch } from "./GlobalSearch";
 
 export default function DashboardNav() {
-    const [searchValue, setSearchValue] = useState("");
     const [isDark, setIsDark] = useState(true);
     const [showCreateMenu, setShowCreateMenu] = useState(false);
     const createMenuRef = useRef<HTMLDivElement>(null);
@@ -151,22 +151,8 @@ export default function DashboardNav() {
                 </div>
 
                 {/* Center Section - Search */}
-                <div className="flex-1 max-w-md mx-4 hidden sm:block">
-                    <div className="relative group">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 group-focus-within:text-zinc-600 dark:group-focus-within:text-zinc-400 transition-colors" />
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            value={searchValue}
-                            onChange={(e) => setSearchValue(e.target.value)}
-                            className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg pl-10 pr-12 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-300 dark:focus:ring-zinc-700 focus:border-zinc-300 dark:focus:border-zinc-700 transition-all"
-                        />
-                        {/* Keyboard shortcut hint */}
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-zinc-400 dark:text-zinc-600">
-                            <Command className="w-3 h-3" />
-                            <span className="text-xs">K</span>
-                        </div>
-                    </div>
+                <div className="flex-1 max-w-md mx-4 hidden sm:flex justify-center">
+                    <GlobalSearch />
                 </div>
 
                 {/* Right Section - Actions & User */}

@@ -12,7 +12,9 @@ import {
     Users,
     Settings
 } from "lucide-react";
+import { toast } from "sonner";
 import { getWorkspaceWithBoards, createBoard, getBoards } from "@/lib/actions";
+import { WorkspaceSettingsModal } from "@/components/dashboard-components/WorkspaceSettingsModal";
 import type { WorkspaceWithBoards, Board } from "@/lib/types/database";
 
 export default function WorkspacePage() {
@@ -22,6 +24,7 @@ export default function WorkspacePage() {
     const [workspace, setWorkspace] = useState<WorkspaceWithBoards | null>(null);
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [newBoardName, setNewBoardName] = useState("");
     const [creating, setCreating] = useState(false);
 
@@ -56,6 +59,7 @@ export default function WorkspacePage() {
                 });
                 setNewBoardName("");
                 setShowCreateModal(false);
+                toast.success("Board created");
             }
         } catch (error) {
             console.error("Error creating board:", error);
@@ -122,7 +126,11 @@ export default function WorkspacePage() {
                     <button className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
                         <Users className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
                     </button>
-                    <button className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                    <button
+                        onClick={() => setShowSettingsModal(true)}
+                        className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                        title="Workspace Settings"
+                    >
                         <Settings className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
                     </button>
                     <button
@@ -218,6 +226,18 @@ export default function WorkspacePage() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Workspace Settings Modal */}
+            {showSettingsModal && (
+                <WorkspaceSettingsModal
+                    workspace={workspace}
+                    onClose={() => setShowSettingsModal(false)}
+                    onUpdate={(updates) => {
+                        setWorkspace({ ...workspace, ...updates });
+                        setShowSettingsModal(false);
+                    }}
+                />
             )}
         </div>
     );
