@@ -20,12 +20,12 @@ export default function Testimonials() {
     };
 
     return (
-        <section className="relative w-full py-16 md:py-24 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800">
-            <div className="max-w-7xl mx-auto px-4 md:px-8">
+        <section className="relative w-full py-12 sm:py-16 md:py-24 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
                 {/* Testimonial Carousel */}
-                <div className="relative mb-12">
+                <div className="relative mb-8 sm:mb-12">
                     {/* Navigation Arrows & Dots */}
-                    <div className="flex items-center justify-end gap-4 mb-8">
+                    <div className="flex items-center justify-end gap-3 sm:gap-4 mb-6 sm:mb-8">
                         {/* Pagination Dots */}
                         <div className="flex items-center gap-2">
                             {testimonials.map((_, index) => (
@@ -69,12 +69,12 @@ export default function Testimonials() {
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -100 }}
                                 transition={{ duration: 0.3 }}
-                                className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 p-8 md:p-12 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-zinc-800"
+                                className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 p-4 sm:p-6 md:p-8 lg:p-12 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-zinc-800"
                             >
                                 {/* Left: Quote */}
                                 <div className="flex flex-col justify-between">
                                     <div>
-                                        <p className="text-zinc-700 dark:text-zinc-300 text-lg md:text-xl leading-relaxed mb-6">
+                                        <p className="text-zinc-700 dark:text-zinc-300 text-base sm:text-lg md:text-xl leading-relaxed mb-4 sm:mb-6">
                                             "{testimonials[currentIndex].quote}"
                                         </p>
                                     </div>
@@ -91,8 +91,8 @@ export default function Testimonials() {
 
                                 {/* Right: Statistic */}
                                 <div className="flex items-center justify-center">
-                                    <div className="w-full p-8 md:p-12 bg-indigo-600 dark:bg-indigo-500 rounded-xl">
-                                        <p className="text-white text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">
+                                    <div className="w-full p-6 sm:p-8 md:p-12 bg-indigo-600 dark:bg-indigo-500 rounded-xl">
+                                        <p className="text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">
                                             {testimonials[currentIndex].stat}
                                         </p>
                                     </div>
@@ -103,19 +103,19 @@ export default function Testimonials() {
                 </div>
 
                 {/* Bottom Section */}
-                <div className="text-center space-y-8">
-                    <p className="text-zinc-600 dark:text-zinc-400 text-base md:text-lg">
+                <div className="text-center space-y-6 sm:space-y-8">
+                    <p className="text-zinc-600 dark:text-zinc-400 text-sm sm:text-base md:text-lg">
                         Join a community of <span className="font-semibold text-zinc-900 dark:text-zinc-100">millions of users globally</span> who are using Axon to get more done.
                     </p>
 
                     {/* Company Logos */}
-                    <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
+                    <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 md:gap-12">
                         {companyLogos.map((company, index) => (
                             <div
                                 key={index}
-                                className="flex items-center gap-2 text-zinc-400 dark:text-zinc-600 font-semibold text-lg md:text-xl tracking-tight hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
+                                className="flex items-center gap-2 text-zinc-400 dark:text-zinc-600 font-semibold text-base sm:text-lg md:text-xl tracking-tight hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
                             >
-                                <company.icon className="w-6 h-6" />
+                                <company.icon className="w-5 h-5 sm:w-6 sm:h-6" />
                                 <span>{company.name}</span>
                             </div>
                         ))}

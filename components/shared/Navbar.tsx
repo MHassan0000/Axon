@@ -29,7 +29,7 @@ export default function Navbar() {
           className="relative rounded-full border border-slate-200 dark:border-white/20 bg-slate-50/90 dark:bg-black backdrop-blur-lg shadow-lg"
           onMouseLeave={() => setActive(null)}
         >
-          <div className="flex items-center justify-between px-8 py-6">
+          <div className="flex items-center justify-between px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-6">
 
             {/* Left: Logo + Axon */}
             <Link href="/" className="flex items-center gap-1 hover:opacity-80 transition-opacity">
@@ -38,9 +38,9 @@ export default function Navbar() {
                 alt="Axon Logo"
                 width={50}
                 height={50}
-                className="object-contain mt-2"
+                className="object-contain mt-2 w-8 h-8 sm:w-10 sm:h-10 md:w-[50px] md:h-[50px]"
               />
-              <span className="text-2xl font-bold text-zinc-900 dark:text-white">
+              <span className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
                 Axon
               </span>
             </Link>
@@ -48,18 +48,18 @@ export default function Navbar() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              className="md:hidden p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
-                <X className="w-6 h-6 text-zinc-900 dark:text-white" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-900 dark:text-white" />
               ) : (
-                <MenuIcon className="w-6 h-6 text-zinc-900 dark:text-white" />
+                <MenuIcon className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-900 dark:text-white" />
               )}
             </button>
 
             {/* Desktop: Center Menu Items */}
-            <div className="hidden lg:flex items-center gap-8">
+            <div className="hidden md:flex items-center gap-6 lg:gap-8">
               <MenuItem setActive={setActive} active={active} item="Features">
                 <div className="flex flex-col space-y-4 text-sm">
                   <HoveredLink href="/boards">Board Management</HoveredLink>
@@ -116,7 +116,7 @@ export default function Navbar() {
             </div>
 
             {/* Desktop: Right - Auth + Theme Toggle */}
-            <div className="hidden lg:flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-3 lg:gap-4">
               {mounted && (
                 <>
                   <SignedOut>
@@ -152,8 +152,8 @@ export default function Navbar() {
 
           {/* Mobile Menu Dropdown */}
           {mobileMenuOpen && (
-            <div className="lg:hidden absolute top-full left-0 right-0 mt-2 bg-white dark:bg-black rounded-3xl border border-zinc-200 dark:border-white/20 shadow-xl p-6">
-              <div className="flex flex-col space-y-4">
+            <div className="md:hidden absolute top-full left-0 right-0 mt-2 bg-white dark:bg-black rounded-3xl border border-zinc-200 dark:border-white/20 shadow-xl p-4 sm:p-6">
+              <div className="flex flex-col space-y-3 sm:space-y-4">
                 {/* Mobile Menu Items */}
                 <Link
                   href="/boards"

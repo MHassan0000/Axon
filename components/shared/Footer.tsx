@@ -7,8 +7,8 @@ export default function Footer() {
     return (
         <footer className="relative w-full bg-zinc-900 dark:bg-black border-t border-zinc-800 dark:border-zinc-900">
             {/* Main Footer Content */}
-            <div className="max-w-7xl mx-auto px-4 md:px-8 py-12 md:py-16">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-10 sm:py-12 md:py-16">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 md:gap-12 mb-10 sm:mb-12">
                     {/* Logo & Tagline */}
                     <div className="col-span-2 md:col-span-1">
                         <Link href="/" className="inline-block mb-4">
@@ -84,12 +84,12 @@ export default function Footer() {
                 </div>
 
                 {/* Divider */}
-                <div className="w-full h-px bg-zinc-800 dark:bg-zinc-900 mb-8" />
+                <div className="w-full h-px bg-zinc-800 dark:bg-zinc-900 mb-6 sm:mb-8" />
 
                 {/* Bottom Bar */}
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
                     {/* Legal Links */}
-                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 text-sm">
+                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 sm:gap-6 text-xs sm:text-sm">
                         <Link
                             href="/privacy"
                             className="text-zinc-400 hover:text-white transition-colors"
@@ -108,7 +108,7 @@ export default function Footer() {
                     </div>
 
                     {/* Social Links */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 sm:gap-4">
                         {socialLinks.map((social) => (
                             <a
                                 key={social.name}
