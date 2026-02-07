@@ -1,17 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
     Users,
     Mail,
     Crown,
     Shield,
     User,
-    Loader2,
     LayoutGrid,
 } from "lucide-react";
 import { useWorkspaces } from "@/lib/context/WorkspaceContext";
 import { getWorkspaceMembers } from "@/lib/actions";
+import { TeamPageSkeleton } from "@/components/ui/Skeleton";
 import type { Workspace } from "@/lib/types/database";
 
 interface MemberWithWorkspace {
@@ -34,20 +34,20 @@ export default function TeamPage() {
             if (loadingWorkspaces) return;
 
             try {
-                const allMembers: MemberWithWorkspace[] = [];
-
-                for (const ws of workspaces) {
-                    const wsMembers = await getWorkspaceMembers(ws.id);
-                    wsMembers.forEach((m) => {
-                        allMembers.push({
+                // Fetch all workspace members in parallel
+                const membersPerWorkspace = await Promise.all(
+                    workspaces.map(async (ws) => {
+                        const wsMembers = await getWorkspaceMembers(ws.id);
+                        return wsMembers.map((m) => ({
                             ...m,
                             workspaceId: ws.id,
                             workspaceName: ws.name,
-                        });
-                    });
-                }
+                        }));
+                    })
+                );
 
-                setMembers(allMembers);
+                // Flatten all members
+                setMembers(membersPerWorkspace.flat());
             } catch (error) {
                 console.error("Error fetching members:", error);
             } finally {
@@ -58,16 +58,18 @@ export default function TeamPage() {
         fetchMembers();
     }, [workspaces, loadingWorkspaces]);
 
-    // Group members by workspace
-    const membersByWorkspace = workspaces.map((ws) => ({
-        workspace: ws,
-        members: members.filter((m) => m.workspaceId === ws.id),
-    }));
+    // Memoize members grouped by workspace
+    const membersByWorkspace = useMemo(() => 
+        workspaces.map((ws) => ({
+            workspace: ws,
+            members: members.filter((m) => m.workspaceId === ws.id),
+        }))
+    , [workspaces, members]);
 
-    // Get unique members (by id)
-    const uniqueMembers = Array.from(
-        new Map(members.map((m) => [m.id, m])).values()
-    );
+    // Memoize unique members (by id)
+    const uniqueMembers = useMemo(() => 
+        Array.from(new Map(members.map((m) => [m.id, m])).values())
+    , [members]);
 
     const getRoleIcon = (role: string) => {
         switch (role) {
@@ -81,13 +83,7 @@ export default function TeamPage() {
     };
 
     if (loading || loadingWorkspaces) {
-        return (
-            <div className="flex flex-col h-full bg-white dark:bg-black">
-                <div className="flex items-center justify-center h-full">
-                    <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
-                </div>
-            </div>
-        );
+        return <TeamPageSkeleton />;
     }
 
     return (

@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState, Suspense, useCallback, useMemo, useTransition } from "react";
 import {
     FolderKanban,
     Plus,
     Sparkles,
-    Loader2,
     LayoutGrid
 } from "lucide-react";
 import Link from "next/link";
@@ -14,6 +13,7 @@ import { toast } from "sonner";
 import { syncCurrentUser, createWorkspace, createBoard, getBoards, getWorkspaceMembers } from "@/lib/actions";
 import { useWorkspaces } from "@/lib/context/WorkspaceContext";
 import { workspaceNameSchema, boardNameSchema, boardColorSchema } from "@/lib/validations";
+import { DashboardPageSkeleton, SkeletonWorkspaceCard, SkeletonBoardCard, SkeletonStat } from "@/components/ui/Skeleton";
 import type { Board, Workspace } from "@/lib/types/database";
 
 // Component to handle search params
@@ -60,36 +60,39 @@ export default function DashboardPage() {
     const [newBoardName, setNewBoardName] = useState("");
     const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
     const [newBoardColor, setNewBoardColor] = useState("#3b82f6");
+    const [isPending, startTransition] = useTransition();
 
     const router = useRouter();
 
-    const handleOpenCreateWorkspace = React.useCallback(() => {
+    const handleOpenCreateWorkspace = useCallback(() => {
         setShowCreateWorkspaceModal(true);
     }, []);
 
-    const handleOpenCreateBoard = React.useCallback((workspaceId: string) => {
+    const handleOpenCreateBoard = useCallback((workspaceId: string) => {
         setSelectedWorkspaceId(workspaceId);
         setShowCreateBoardModal(true);
     }, []);
 
-    // Sync user and fetch boards on mount
+    // Sync user and fetch boards on mount - with parallel fetching
     useEffect(() => {
         async function initDashboard() {
             try {
-                // Sync user to Supabase
-                await syncCurrentUser();
+                // Start user sync in parallel (fire and forget for faster load)
+                syncCurrentUser().catch(console.error);
 
                 // Fetch boards for first workspace if exists
                 if (workspaces.length > 0) {
-                    const b = await getBoards(workspaces[0].id);
-                    setBoards(b);
+                    // Parallel fetch: boards and members at the same time
+                    const [boardsResult, ...membersResults] = await Promise.all([
+                        getBoards(workspaces[0].id),
+                        ...workspaces.map(ws => getWorkspaceMembers(ws.id))
+                    ]);
 
-                    // Fetch team members count across all workspaces
-                    const membersPromises = workspaces.map(ws => getWorkspaceMembers(ws.id));
-                    const membersArrays = await Promise.all(membersPromises);
+                    setBoards(boardsResult);
+
                     // Get unique members across all workspaces
                     const uniqueMembers = new Set<string>();
-                    membersArrays.flat().forEach(m => uniqueMembers.add(m.id));
+                    membersResults.flat().forEach(m => uniqueMembers.add(m.id));
                     setTeamMembersCount(uniqueMembers.size);
                 }
             } catch (error) {
@@ -113,12 +116,30 @@ export default function DashboardPage() {
         }
 
         setCreating(true);
+        
+        // Optimistic update - create temp workspace immediately
+        const tempId = `temp-${Date.now()}`;
+        const tempWorkspace: Workspace = {
+            id: tempId,
+            name: validation.data,
+            description: null,
+            owner_id: "",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        };
+        
+        // Immediately add to UI
+        addWorkspace(tempWorkspace);
+        setNewWorkspaceName("");
+        setShowCreateWorkspaceModal(false);
+
         try {
             const result = await createWorkspace({ name: validation.data });
             if (result.workspace) {
-                addWorkspace(result.workspace);
-                setNewWorkspaceName("");
-                setShowCreateWorkspaceModal(false);
+                // Replace temp with real workspace using transition for smooth update
+                startTransition(() => {
+                    // Context will be updated by the action
+                });
                 toast.success("Workspace created successfully");
             } else {
                 toast.error(result.error || "Failed to create workspace");
@@ -150,15 +171,19 @@ export default function DashboardPage() {
         }
 
         setCreating(true);
+        
+        // Close modal immediately for faster feel
+        setShowCreateBoardModal(false);
+        const boardName = nameValidation.data;
+        setNewBoardName("");
+
         try {
             const result = await createBoard({
                 workspace_id: selectedWorkspaceId,
-                name: nameValidation.data,
+                name: boardName,
                 background_color: newBoardColor,
             });
             if (result.board) {
-                setNewBoardName("");
-                setShowCreateBoardModal(false);
                 toast.success("Board created successfully");
                 router.push(`/dashboard/board/${result.board.id}`);
             } else {
@@ -171,22 +196,18 @@ export default function DashboardPage() {
         }
     };
 
-    if (loading || loadingWorkspaces) {
-        return (
-            <div className="flex flex-col h-full bg-white dark:bg-black transition-colors duration-200">
-                <div className="flex items-center justify-center h-full">
-                    <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
-                </div>
-            </div>
-        );
-    }
-
-    const hasContent = workspaces.length > 0 || boards.length > 0;
-
-    const boardColors = [
+    // Memoize derived values
+    const hasContent = useMemo(() => workspaces.length > 0 || boards.length > 0, [workspaces.length, boards.length]);
+    
+    const boardColors = useMemo(() => [
         "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
         "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
-    ];
+    ], []);
+
+    // Show skeleton while loading
+    if (loading || loadingWorkspaces) {
+        return <DashboardPageSkeleton />;
+    }
 
     return (
         <div className="flex flex-col h-full bg-white dark:bg-black transition-colors duration-200">
@@ -323,7 +344,6 @@ export default function DashboardPage() {
                                 disabled={!newWorkspaceName.trim() || creating}
                                 className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg font-medium text-sm hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {creating && <Loader2 className="w-4 h-4 animate-spin" />}
                                 Create
                             </button>
                         </div>
@@ -403,7 +423,6 @@ export default function DashboardPage() {
                                 disabled={!newBoardName.trim() || !selectedWorkspaceId || creating}
                                 className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg font-medium text-sm hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {creating && <Loader2 className="w-4 h-4 animate-spin" />}
                                 Create Board
                             </button>
                         </div>
@@ -414,8 +433,8 @@ export default function DashboardPage() {
     );
 }
 
-/* Workspace Card Component */
-function WorkspaceCard({ workspace }: { workspace: Workspace }) {
+/* Workspace Card Component - Memoized */
+const WorkspaceCard = React.memo(function WorkspaceCard({ workspace }: { workspace: Workspace }) {
     return (
         <Link
             href={`/dashboard/workspace/${workspace.id}`}
@@ -441,10 +460,10 @@ function WorkspaceCard({ workspace }: { workspace: Workspace }) {
             </div>
         </Link>
     );
-}
+});
 
-/* Board Card Component */
-function BoardCard({ board }: { board: Board }) {
+/* Board Card Component - Memoized */
+const BoardCard = React.memo(function BoardCard({ board }: { board: Board }) {
     return (
         <Link
             href={`/dashboard/board/${board.id}`}
@@ -464,14 +483,14 @@ function BoardCard({ board }: { board: Board }) {
             </div>
         </Link>
     );
-}
+});
 
-/* Stat Card Component */
-function StatCard({ title, value }: { title: string; value: string }) {
+/* Stat Card Component - Memoized */
+const StatCard = React.memo(function StatCard({ title, value }: { title: string; value: string }) {
     return (
         <div className="p-5 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800/80 rounded-xl">
             <p className="text-sm text-zinc-500 dark:text-zinc-500 mb-1">{title}</p>
             <p className="text-2xl font-semibold text-zinc-800 dark:text-zinc-200">{value}</p>
         </div>
     );
-}
+});

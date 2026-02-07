@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Bell, Check, Trash2, Filter, CheckCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
@@ -11,6 +11,7 @@ import {
     deleteNotification,
     clearAllNotifications,
 } from "@/lib/actions/notifications";
+import { NotificationsPageSkeleton } from "@/components/ui/Skeleton";
 import type { Notification } from "@/lib/types/database";
 
 export default function NotificationsPage() {
@@ -29,27 +30,53 @@ export default function NotificationsPage() {
         setLoading(false);
     };
 
-    const handleMarkAsRead = async (id: string) => {
-        await markAsRead(id);
+    // Optimistic update: Mark as read immediately, then sync
+    const handleMarkAsRead = useCallback(async (id: string) => {
+        // Update UI immediately
         setNotifications((prev) =>
             prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
         );
-    };
+        // Then sync with server
+        await markAsRead(id);
+    }, []);
 
-    const handleMarkAllAsRead = async () => {
-        await markAllAsRead();
+    // Optimistic update: Mark all as read immediately
+    const handleMarkAllAsRead = useCallback(async () => {
+        // Update UI immediately
         setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    };
+        // Then sync with server
+        await markAllAsRead();
+    }, []);
 
-    const handleDelete = async (id: string) => {
-        await deleteNotification(id);
+    // Optimistic update: Remove from list immediately
+    const handleDelete = useCallback(async (id: string) => {
+        // Store for potential rollback
+        const previousNotifications = notifications;
+        // Update UI immediately
         setNotifications((prev) => prev.filter((n) => n.id !== id));
-    };
+        // Then sync with server
+        try {
+            await deleteNotification(id);
+        } catch {
+            // Rollback on error
+            setNotifications(previousNotifications);
+        }
+    }, [notifications]);
 
-    const handleClearAll = async () => {
-        await clearAllNotifications();
+    // Optimistic update: Clear all immediately
+    const handleClearAll = useCallback(async () => {
+        // Store for potential rollback
+        const previousNotifications = notifications;
+        // Update UI immediately
         setNotifications([]);
-    };
+        // Then sync with server
+        try {
+            await clearAllNotifications();
+        } catch {
+            // Rollback on error
+            setNotifications(previousNotifications);
+        }
+    }, [notifications]);
 
     const filteredNotifications =
         filter === "all"
@@ -57,6 +84,10 @@ export default function NotificationsPage() {
             : notifications.filter((n) => !n.is_read);
 
     const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+    if (loading) {
+        return <NotificationsPageSkeleton />;
+    }
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-6">
@@ -126,9 +157,7 @@ export default function NotificationsPage() {
 
                 {/* Notification List */}
                 <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-                    {loading ? (
-                        <div className="p-12 text-center text-zinc-500">Loading...</div>
-                    ) : filteredNotifications.length === 0 ? (
+                    {filteredNotifications.length === 0 ? (
                         <div className="p-12 text-center">
                             <Bell className="w-12 h-12 text-zinc-300 dark:text-zinc-700 mx-auto mb-3" />
                             <p className="text-zinc-500 dark:text-zinc-400">
@@ -140,84 +169,12 @@ export default function NotificationsPage() {
                     ) : (
                         <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
                             {filteredNotifications.map((notification) => (
-                                <div
+                                <NotificationItem
                                     key={notification.id}
-                                    className={`relative p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${!notification.is_read
-                                            ? "bg-indigo-50/50 dark:bg-indigo-900/10"
-                                            : ""
-                                        }`}
-                                >
-                                    <div className="flex items-start gap-4">
-                                        {/* Unread indicator */}
-                                        <div className="pt-1.5">
-                                            {!notification.is_read ? (
-                                                <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                                            ) : (
-                                                <div className="w-2 h-2" />
-                                            )}
-                                        </div>
-
-                                        {/* Content */}
-                                        <div className="flex-1 min-w-0">
-                                            {notification.link ? (
-                                                <Link
-                                                    href={notification.link}
-                                                    onClick={() => {
-                                                        if (!notification.is_read) {
-                                                            handleMarkAsRead(notification.id);
-                                                        }
-                                                    }}
-                                                    className="block"
-                                                >
-                                                    <p className="font-medium text-zinc-900 dark:text-white">
-                                                        {notification.title}
-                                                    </p>
-                                                    {notification.message && (
-                                                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                                                            {notification.message}
-                                                        </p>
-                                                    )}
-                                                </Link>
-                                            ) : (
-                                                <>
-                                                    <p className="font-medium text-zinc-900 dark:text-white">
-                                                        {notification.title}
-                                                    </p>
-                                                    {notification.message && (
-                                                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                                                            {notification.message}
-                                                        </p>
-                                                    )}
-                                                </>
-                                            )}
-                                            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2">
-                                                {formatDistanceToNow(new Date(notification.created_at), {
-                                                    addSuffix: true,
-                                                })}
-                                            </p>
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div className="flex items-center gap-1">
-                                            {!notification.is_read && (
-                                                <button
-                                                    onClick={() => handleMarkAsRead(notification.id)}
-                                                    className="p-2 rounded-lg text-zinc-400 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                                    title="Mark as read"
-                                                >
-                                                    <Check className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                            <button
-                                                onClick={() => handleDelete(notification.id)}
-                                                className="p-2 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                                title="Delete"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
+                                    notification={notification}
+                                    onMarkAsRead={handleMarkAsRead}
+                                    onDelete={handleDelete}
+                                />
                             ))}
                         </div>
                     )}
@@ -226,3 +183,94 @@ export default function NotificationsPage() {
         </div>
     );
 }
+
+/* Notification Item Component - Memoized for performance */
+const NotificationItem = React.memo(function NotificationItem({
+    notification,
+    onMarkAsRead,
+    onDelete,
+}: {
+    notification: Notification;
+    onMarkAsRead: (id: string) => void;
+    onDelete: (id: string) => void;
+}) {
+    return (
+        <div
+            className={`relative p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${!notification.is_read
+                    ? "bg-indigo-50/50 dark:bg-indigo-900/10"
+                    : ""
+                }`}
+        >
+            <div className="flex items-start gap-4">
+                {/* Unread indicator */}
+                <div className="pt-1.5">
+                    {!notification.is_read ? (
+                        <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                    ) : (
+                        <div className="w-2 h-2" />
+                    )}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                    {notification.link ? (
+                        <Link
+                            href={notification.link}
+                            onClick={() => {
+                                if (!notification.is_read) {
+                                    onMarkAsRead(notification.id);
+                                }
+                            }}
+                            className="block"
+                        >
+                            <p className="font-medium text-zinc-900 dark:text-white">
+                                {notification.title}
+                            </p>
+                            {notification.message && (
+                                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                                    {notification.message}
+                                </p>
+                            )}
+                        </Link>
+                    ) : (
+                        <>
+                            <p className="font-medium text-zinc-900 dark:text-white">
+                                {notification.title}
+                            </p>
+                            {notification.message && (
+                                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                                    {notification.message}
+                                </p>
+                            )}
+                        </>
+                    )}
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2">
+                        {formatDistanceToNow(new Date(notification.created_at), {
+                            addSuffix: true,
+                        })}
+                    </p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1">
+                    {!notification.is_read && (
+                        <button
+                            onClick={() => onMarkAsRead(notification.id)}
+                            className="p-2 rounded-lg text-zinc-400 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                            title="Mark as read"
+                        >
+                            <Check className="w-4 h-4" />
+                        </button>
+                    )}
+                    <button
+                        onClick={() => onDelete(notification.id)}
+                        className="p-2 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                        title="Delete"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+});

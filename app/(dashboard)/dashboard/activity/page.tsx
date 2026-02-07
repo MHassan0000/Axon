@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
     Activity,
-    Loader2,
     Clock,
     MoveRight,
     CheckCircle,
@@ -16,6 +15,7 @@ import {
     XCircle,
 } from "lucide-react";
 import { getRecentActivity } from "@/lib/actions";
+import { ActivityPageSkeleton } from "@/components/ui/Skeleton";
 import type { ActivityLog } from "@/lib/types/database";
 
 interface ActivityWithUser extends ActivityLog {
@@ -141,6 +141,10 @@ export default function MessagesPage() {
         fetchActivity();
     }, []);
 
+    if (loading) {
+        return <ActivityPageSkeleton />;
+    }
+
     return (
         <div className="flex flex-col h-full bg-white dark:bg-black overflow-hidden">
             {/* Page Header */}
@@ -162,11 +166,7 @@ export default function MessagesPage() {
 
             {/* Content */}
             <div className="flex-1 overflow-auto p-4 sm:p-6">
-                {loading ? (
-                    <div className="flex items-center justify-center h-64">
-                        <Loader2 className="w-8 h-8 text-zinc-600 dark:text-zinc-400 animate-spin" />
-                    </div>
-                ) : activities.length === 0 ? (
+                {activities.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-64">
                         <div className="w-16 h-16 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center mb-4">
                             <Activity className="w-8 h-8 text-zinc-600 dark:text-zinc-400" />
@@ -181,47 +181,7 @@ export default function MessagesPage() {
                 ) : (
                     <div className="max-w-2xl space-y-2">
                         {activities.map((activity) => (
-                            <div
-                                key={activity.id}
-                                className="flex items-start gap-4 p-4 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors"
-                            >
-                                {/* User Avatar */}
-                                <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center shrink-0">
-                                    {activity.user?.avatar_url ? (
-                                        <img
-                                            src={activity.user.avatar_url}
-                                            alt={activity.user.name || ""}
-                                            className="w-full h-full rounded-full object-cover"
-                                        />
-                                    ) : (
-                                        <span className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
-                                            {activity.user?.name?.[0]?.toUpperCase() || "?"}
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Activity Content */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                        {getActionIcon(activity.action)}
-                                        <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                                            {activity.user?.name || "Unknown"}
-                                        </span>
-                                        <span className="text-zinc-700 dark:text-zinc-400">
-                                            {formatActionText(activity.action)}
-                                        </span>
-                                    </div>
-                                    {activity.details && (
-                                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                                            {formatDetails(activity.action, activity.details as Record<string, unknown>)}
-                                        </p>
-                                    )}
-                                    <div className="flex items-center gap-1 mt-2 text-xs text-zinc-600 dark:text-zinc-400">
-                                        <Clock className="w-3 h-3" />
-                                        {formatTimeAgo(activity.created_at)}
-                                    </div>
-                                </div>
-                            </div>
+                            <ActivityItem key={activity.id} activity={activity} />
                         ))}
                     </div>
                 )}
@@ -229,3 +189,49 @@ export default function MessagesPage() {
         </div>
     );
 }
+
+/* Activity Item Component - Memoized for performance */
+const ActivityItem = React.memo(function ActivityItem({ activity }: { activity: ActivityWithUser }) {
+    return (
+        <div
+            className="flex items-start gap-4 p-4 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors"
+        >
+            {/* User Avatar */}
+            <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center shrink-0">
+                {activity.user?.avatar_url ? (
+                    <img
+                        src={activity.user.avatar_url}
+                        alt={activity.user.name || ""}
+                        className="w-full h-full rounded-full object-cover"
+                    />
+                ) : (
+                    <span className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
+                        {activity.user?.name?.[0]?.toUpperCase() || "?"}
+                    </span>
+                )}
+            </div>
+
+            {/* Activity Content */}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    {getActionIcon(activity.action)}
+                    <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                        {activity.user?.name || "Unknown"}
+                    </span>
+                    <span className="text-zinc-700 dark:text-zinc-400">
+                        {formatActionText(activity.action)}
+                    </span>
+                </div>
+                {activity.details && (
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                        {formatDetails(activity.action, activity.details as Record<string, unknown>)}
+                    </p>
+                )}
+                <div className="flex items-center gap-1 mt-2 text-xs text-zinc-600 dark:text-zinc-400">
+                    <Clock className="w-3 h-3" />
+                    {formatTimeAgo(activity.created_at)}
+                </div>
+            </div>
+        </div>
+    );
+});

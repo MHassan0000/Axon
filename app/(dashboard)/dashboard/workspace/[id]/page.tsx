@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { getWorkspaceWithBoards, createBoard, getBoards } from "@/lib/actions";
 import { boardNameSchema } from "@/lib/validations";
 import { WorkspaceSettingsModal } from "@/components/dashboard-components/WorkspaceSettingsModal";
+import { WorkspacePageSkeleton } from "@/components/ui/Skeleton";
 import type { WorkspaceWithBoards, Board } from "@/lib/types/database";
 
 export default function WorkspacePage() {
@@ -27,7 +28,6 @@ export default function WorkspacePage() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [newBoardName, setNewBoardName] = useState("");
-    const [creating, setCreating] = useState(false);
 
     useEffect(() => {
         async function fetchWorkspace() {
@@ -44,45 +44,81 @@ export default function WorkspacePage() {
         fetchWorkspace();
     }, [workspaceId]);
 
-    const handleCreateBoard = async () => {
+    const handleCreateBoard = useCallback(async () => {
         const validation = boardNameSchema.safeParse(newBoardName);
         if (!validation.success) {
             toast.error(validation.error.issues[0]?.message || "Invalid board name");
             return;
         }
 
-        setCreating(true);
+        if (!workspace) return;
+
+        // Optimistic update: Create temp board and close modal immediately
+        const tempId = `temp-${Date.now()}`;
+        const tempBoard: Board = {
+            id: tempId,
+            workspace_id: workspaceId,
+            name: validation.data,
+            description: null,
+            background_color: "#6366f1",
+            is_private: false,
+            position: workspace.boards.length,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        };
+
+        // Update UI immediately
+        setWorkspace({
+            ...workspace,
+            boards: [...workspace.boards, tempBoard]
+        });
+        setNewBoardName("");
+        setShowCreateModal(false);
+
+        // Then sync with server
         try {
             const result = await createBoard({
                 workspace_id: workspaceId,
                 name: validation.data
             });
-            if (result.board && workspace) {
-                setWorkspace({
-                    ...workspace,
-                    boards: [...workspace.boards, result.board]
+            if (result.board) {
+                // Replace temp board with real one
+                setWorkspace((prev) => {
+                    if (!prev) return prev;
+                    return {
+                        ...prev,
+                        boards: prev.boards.map((b) => 
+                            b.id === tempId ? result.board! : b
+                        )
+                    };
                 });
-                setNewBoardName("");
-                setShowCreateModal(false);
                 toast.success("Board created");
             } else {
+                // Rollback on error
+                setWorkspace((prev) => {
+                    if (!prev) return prev;
+                    return {
+                        ...prev,
+                        boards: prev.boards.filter((b) => b.id !== tempId)
+                    };
+                });
                 toast.error(result.error || "Failed to create board");
             }
         } catch {
+            // Rollback on error
+            setWorkspace((prev) => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    boards: prev.boards.filter((b) => b.id !== tempId)
+                };
+            });
             toast.error("Failed to create board");
-        } finally {
-            setCreating(false);
         }
-    };
+    }, [newBoardName, workspace, workspaceId]);
 
     if (loading) {
-        return (
-            <div className="flex flex-col h-full bg-white dark:bg-black transition-colors duration-200">
-                <div className="flex items-center justify-center h-full">
-                    <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
-                </div>
-            </div>
-        );
+        return <WorkspacePageSkeleton />;
     }
 
     if (!workspace) {
@@ -224,10 +260,9 @@ export default function WorkspacePage() {
                             </button>
                             <button
                                 onClick={handleCreateBoard}
-                                disabled={!newBoardName.trim() || creating}
+                                disabled={!newBoardName.trim()}
                                 className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg font-medium text-sm hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {creating && <Loader2 className="w-4 h-4 animate-spin" />}
                                 Create
                             </button>
                         </div>
@@ -250,8 +285,8 @@ export default function WorkspacePage() {
     );
 }
 
-/* Board Card Component */
-function BoardCard({ board }: { board: Board }) {
+/* Board Card Component - Memoized for performance */
+const BoardCard = React.memo(function BoardCard({ board }: { board: Board }) {
     return (
         <Link
             href={`/dashboard/board/${board.id}`}
@@ -279,4 +314,4 @@ function BoardCard({ board }: { board: Board }) {
             </div>
         </Link>
     );
-}
+});

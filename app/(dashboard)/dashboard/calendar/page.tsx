@@ -1,15 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
     Calendar as CalendarIcon,
     ChevronLeft,
     ChevronRight,
-    Clock,
-    Loader2,
 } from "lucide-react";
 import { useWorkspaces } from "@/lib/context/WorkspaceContext";
 import { getBoards, getBoardWithLists } from "@/lib/actions";
+import { CalendarPageSkeleton } from "@/components/ui/Skeleton";
 import type { CardWithRelations } from "@/lib/types/database";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -33,33 +32,43 @@ export default function CalendarPage() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
 
-    // Fetch all cards with due dates
+    // Fetch all cards with due dates using parallel fetching
     useEffect(() => {
         async function fetchCards() {
             if (loadingWorkspaces) return;
 
             try {
-                const allCards: CardDueDate[] = [];
+                // Step 1: Fetch all boards for all workspaces in parallel
+                const boardsPerWorkspace = await Promise.all(
+                    workspaces.map((ws) => getBoards(ws.id))
+                );
 
-                for (const ws of workspaces) {
-                    const boards = await getBoards(ws.id);
-                    for (const board of boards) {
-                        const boardWithLists = await getBoardWithLists(board.id);
-                        if (boardWithLists?.lists) {
-                            for (const list of boardWithLists.lists) {
-                                for (const card of list.cards) {
-                                    if (card.due_date) {
-                                        allCards.push({
-                                            card,
-                                            boardName: board.name,
-                                            boardColor: board.background_color || "#6366f1",
-                                        });
-                                    }
+                // Flatten all boards
+                const allBoards = boardsPerWorkspace.flat();
+
+                // Step 2: Fetch all board details in parallel
+                const boardsWithLists = await Promise.all(
+                    allBoards.map((board) => getBoardWithLists(board.id))
+                );
+
+                // Step 3: Extract all cards with due dates
+                const allCards: CardDueDate[] = [];
+                boardsWithLists.forEach((boardWithLists, index) => {
+                    if (boardWithLists?.lists) {
+                        const board = allBoards[index];
+                        for (const list of boardWithLists.lists) {
+                            for (const card of list.cards) {
+                                if (card.due_date) {
+                                    allCards.push({
+                                        card,
+                                        boardName: board.name,
+                                        boardColor: board.background_color || "#6366f1",
+                                    });
                                 }
                             }
                         }
                     }
-                }
+                });
 
                 // Group by date (YYYY-MM-DD)
                 const grouped = new Map<string, CardDueDate[]>();
@@ -81,18 +90,21 @@ export default function CalendarPage() {
         fetchCards();
     }, [workspaces, loadingWorkspaces]);
 
-    // Get first day of month and total days
-    const firstDayOfMonth = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    // Generate calendar days
-    const calendarDays: (number | null)[] = [];
-    for (let i = 0; i < firstDayOfMonth; i++) {
-        calendarDays.push(null);
-    }
-    for (let i = 1; i <= daysInMonth; i++) {
-        calendarDays.push(i);
-    }
+    // Memoize calendar computation
+    const { calendarDays, firstDayOfMonth, daysInMonth } = useMemo(() => {
+        const firstDay = new Date(year, month, 1).getDay();
+        const days = new Date(year, month + 1, 0).getDate();
+        
+        const calDays: (number | null)[] = [];
+        for (let i = 0; i < firstDay; i++) {
+            calDays.push(null);
+        }
+        for (let i = 1; i <= days; i++) {
+            calDays.push(i);
+        }
+        
+        return { calendarDays: calDays, firstDayOfMonth: firstDay, daysInMonth: days };
+    }, [year, month]);
 
     const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
     const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
@@ -104,20 +116,21 @@ export default function CalendarPage() {
         month === today.getMonth() &&
         year === today.getFullYear();
 
-    // Get cards for a specific day
-    const getCardsForDay = (day: number): CardDueDate[] => {
-        const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-        return cardsByDate.get(dateKey) || [];
-    };
+    // Memoize getCardsForDay helper
+    const getCardsForDay = useMemo(() => {
+        return (day: number): CardDueDate[] => {
+            const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+            return cardsByDate.get(dateKey) || [];
+        };
+    }, [year, month, cardsByDate]);
+
+    // Memoize total cards count
+    const totalCardsWithDueDates = useMemo(() => 
+        Array.from(cardsByDate.values()).flat().length
+    , [cardsByDate]);
 
     if (loading || loadingWorkspaces) {
-        return (
-            <div className="flex flex-col h-full bg-white dark:bg-black">
-                <div className="flex items-center justify-center h-full">
-                    <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
-                </div>
-            </div>
-        );
+        return <CalendarPageSkeleton />;
     }
 
     return (
@@ -132,8 +145,8 @@ export default function CalendarPage() {
                                 Calendar
                             </h1>
                             <p className="text-sm text-zinc-500">
-                                {cardsByDate.size > 0
-                                    ? `${Array.from(cardsByDate.values()).flat().length} cards with due dates`
+                                {totalCardsWithDueDates > 0
+                                    ? `${totalCardsWithDueDates} cards with due dates`
                                     : "View tasks and due dates"}
                             </p>
                         </div>
