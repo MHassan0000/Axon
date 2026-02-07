@@ -367,14 +367,14 @@ export function CardModal({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 sm:pt-16 px-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-4 sm:pt-8 md:pt-16 px-3 sm:px-4">
             <div
                 className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                 onClick={onClose}
             />
-            <div className="relative bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 w-full max-w-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="relative bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 w-full max-w-3xl shadow-2xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto">
                 {/* Header */}
-                <div className="sticky top-0 z-10 flex items-start justify-between p-6 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                <div className="sticky top-0 z-10 flex items-start justify-between p-4 sm:p-6 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
                     <div className="flex-1 pr-4">
                         {editing ? (
                             <input
@@ -399,9 +399,9 @@ export function CardModal({
                 </div>
 
                 {/* Content */}
-                <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                     {/* Main Content */}
-                    <div className="md:col-span-2 space-y-6">
+                    <div className="md:col-span-2 space-y-5 sm:space-y-6 order-2 md:order-1">
                         {/* Labels Section */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
@@ -872,8 +872,8 @@ export function CardModal({
                         </div>
                     </div>
 
-                    {/* Sidebar Actions */}
-                    <div className="space-y-2">
+                    {/* Sidebar Actions - appears first on mobile, last on desktop */}
+                    <div className="space-y-2 order-1 md:order-2">
                         <h4 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
                             Actions
                         </h4>

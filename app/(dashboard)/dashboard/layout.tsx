@@ -9,25 +9,32 @@ import { DashboardPageSkeleton } from "@/components/ui/Skeleton";
 // Skeleton for the sidebar during loading
 function SidebarSkeleton() {
     return (
-        <div className="hidden md:block w-64 h-full bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800/80">
-            <div className="p-4 space-y-4">
-                {/* Workspace selector skeleton */}
-                <div className="h-10 bg-zinc-100 dark:bg-zinc-900 rounded-lg animate-pulse" />
+        <div className="hidden md:flex md:w-64 h-full bg-zinc-50 dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800/80 flex-col">
+            {/* Header skeleton */}
+            <div className="h-14 border-b border-zinc-200 dark:border-zinc-800/80 px-4 flex items-center">
+                <div className="h-6 w-16 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
+            </div>
+            <div className="p-3 space-y-4 flex-1">
                 {/* Nav items skeleton */}
-                <div className="space-y-2 pt-4">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                        <div key={i} className="h-9 bg-zinc-100 dark:bg-zinc-900 rounded-lg animate-pulse" />
+                <div className="space-y-1">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="h-10 bg-zinc-100 dark:bg-zinc-900 rounded-lg animate-pulse" />
                     ))}
                 </div>
                 {/* Workspaces section skeleton */}
-                <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                    <div className="h-4 w-24 bg-zinc-100 dark:bg-zinc-900 rounded animate-pulse mb-3" />
-                    <div className="space-y-2">
+                <div className="pt-4 mt-2">
+                    <div className="h-3 w-20 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse mb-3 mx-3" />
+                    <div className="space-y-1">
                         {[1, 2, 3].map((i) => (
-                            <div key={i} className="h-8 bg-zinc-100 dark:bg-zinc-900 rounded-lg animate-pulse" />
+                            <div key={i} className="h-9 bg-zinc-100 dark:bg-zinc-900 rounded-lg animate-pulse" />
                         ))}
                     </div>
                 </div>
+            </div>
+            {/* Bottom skeleton */}
+            <div className="border-t border-zinc-200 dark:border-zinc-800/80 p-3 space-y-1">
+                <div className="h-10 bg-zinc-100 dark:bg-zinc-900 rounded-lg animate-pulse" />
+                <div className="h-10 bg-zinc-100 dark:bg-zinc-900 rounded-lg animate-pulse" />
             </div>
         </div>
     );

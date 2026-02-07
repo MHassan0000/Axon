@@ -24,6 +24,8 @@ import type { SearchResult } from "@/lib/actions/search";
 
 interface GlobalSearchProps {
     placeholder?: string;
+    autoFocus?: boolean;
+    onResultClick?: () => void;
 }
 
 // =====================================================
@@ -203,7 +205,7 @@ const RecentSearchItem = memo(function RecentSearchItem({
 // Main Component
 // =====================================================
 
-export function GlobalSearch({ placeholder = "Search..." }: GlobalSearchProps) {
+export function GlobalSearch({ placeholder = "Search...", autoFocus = false, onResultClick }: GlobalSearchProps) {
     const router = useRouter();
     const inputRef = useRef<HTMLInputElement>(null);
     const [isOpen, setIsOpen] = useState(false);
@@ -250,12 +252,12 @@ export function GlobalSearch({ placeholder = "Search..." }: GlobalSearchProps) {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [isOpen]);
 
-    // Focus input when modal opens
+    // Focus input when modal opens or autoFocus is true
     useEffect(() => {
-        if (isOpen && inputRef.current) {
+        if ((isOpen || autoFocus) && inputRef.current) {
             setTimeout(() => inputRef.current?.focus(), 50);
         }
-    }, [isOpen]);
+    }, [isOpen, autoFocus]);
 
     // Reset selected index when results change
     useEffect(() => {
@@ -270,6 +272,9 @@ export function GlobalSearch({ placeholder = "Search..." }: GlobalSearchProps) {
 
             // Save to recent searches
             addRecentSearch(result.name, result);
+
+            // Notify parent of result click (for mobile overlay)
+            onResultClick?.();
 
             // Navigate based on type
             switch (result.type) {
@@ -292,7 +297,7 @@ export function GlobalSearch({ placeholder = "Search..." }: GlobalSearchProps) {
                     break;
             }
         },
-        [router, addRecentSearch]
+        [router, addRecentSearch, onResultClick]
     );
 
     // Handle recent search selection
@@ -330,8 +335,8 @@ export function GlobalSearch({ placeholder = "Search..." }: GlobalSearchProps) {
         setSelectedIndex(0);
     }, []);
 
-    // Search button (collapsed state)
-    if (!isOpen) {
+    // Search button (collapsed state) - skip if autoFocus is set (mobile mode)
+    if (!isOpen && !autoFocus) {
         return (
             <button
                 onClick={() => setIsOpen(true)}

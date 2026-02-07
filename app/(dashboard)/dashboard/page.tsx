@@ -259,7 +259,7 @@ export default function DashboardPage() {
             </Suspense>
 
             {/* Page Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/80">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/80">
                 <div>
                     <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Dashboard</h1>
                     <p className="text-sm text-zinc-700 dark:text-zinc-400 mt-0.5">Welcome back to your workspace</p>
@@ -267,7 +267,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 overflow-auto p-6">
+            <div className="flex-1 overflow-auto p-4 sm:p-6">
                 {!hasContent ? (
                     /* Empty State */
                     <div className="flex flex-col items-center justify-center h-full min-h-100">
@@ -352,7 +352,7 @@ export default function DashboardPage() {
 
             {/* Create Workspace Modal */}
             {showCreateWorkspaceModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
                     <div
                         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
                         onClick={() => setShowCreateWorkspaceModal(false)}
@@ -391,7 +391,7 @@ export default function DashboardPage() {
 
             {/* Create Board Modal */}
             {showCreateBoardModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
                     <div
                         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
                         onClick={() => {

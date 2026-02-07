@@ -208,52 +208,53 @@ export default function WorkspacePage() {
     return (
         <div className="flex flex-col h-full bg-white dark:bg-black transition-colors duration-200">
             {/* Page Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/80">
-                <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 px-4 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/80">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                     <Link
                         href="/dashboard"
-                        className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                        className="p-1.5 sm:p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0"
                     >
-                        <ArrowLeft className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+                        <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 dark:text-zinc-400" />
                     </Link>
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-linear-to-br from-zinc-700 to-zinc-900 dark:from-zinc-600 dark:to-zinc-800 flex items-center justify-center">
-                            <LayoutGrid className="w-5 h-5 text-white" />
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-linear-to-br from-zinc-700 to-zinc-900 dark:from-zinc-600 dark:to-zinc-800 flex items-center justify-center shrink-0">
+                            <LayoutGrid className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                         </div>
-                        <div>
-                            <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+                        <div className="min-w-0">
+                            <h1 className="text-lg sm:text-xl font-semibold text-zinc-900 dark:text-zinc-100 truncate">
                                 {workspace.name}
                             </h1>
-                            <p className="text-sm text-zinc-500">
+                            <p className="text-xs sm:text-sm text-zinc-500">
                                 {workspace.boards.length} board{workspace.boards.length !== 1 ? "s" : ""}
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <button className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                        <Users className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+                <div className="flex items-center gap-2 ml-auto sm:ml-0">
+                    <button className="p-1.5 sm:p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                        <Users className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 dark:text-zinc-400" />
                     </button>
                     <button
                         onClick={() => setShowSettingsModal(true)}
-                        className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                        className="p-1.5 sm:p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                         title="Workspace Settings"
                     >
-                        <Settings className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+                        <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 dark:text-zinc-400" />
                     </button>
                     <button
                         onClick={() => setShowCreateModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg font-medium text-sm hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-all"
+                        className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg font-medium text-sm hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-all"
                     >
                         <Plus className="w-4 h-4" />
-                        New Board
+                        <span className="hidden xs:inline">New Board</span>
+                        <span className="xs:hidden">New</span>
                     </button>
                 </div>
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 overflow-auto p-6">
+            <div className="flex-1 overflow-auto p-4 sm:p-6">
                 {workspace.boards.length === 0 ? (
                     /* Empty State */
                     <div className="flex flex-col items-center justify-center h-full min-h-100">
@@ -299,7 +300,7 @@ export default function WorkspacePage() {
 
             {/* Create Board Modal */}
             {showCreateModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
                     <div
                         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
                         onClick={() => {
@@ -309,7 +310,7 @@ export default function WorkspacePage() {
                             setNewBoardImage(null);
                         }}
                     />
-                    <div className="relative bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 w-full max-w-md shadow-2xl">
+                    <div className="relative bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-5 sm:p-6 w-full max-w-md shadow-2xl">
                         <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
                             Create Board
                         </h3>

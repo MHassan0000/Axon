@@ -686,20 +686,20 @@ export default function BoardPage() {
             style={boardBackgroundStyle}
         >
             {/* Board Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-black/30 backdrop-blur-sm border-b border-white/10">
-                <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 bg-black/30 backdrop-blur-sm border-b border-white/10">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <button
                         onClick={() => router.back()}
-                        className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                        className="p-1.5 sm:p-2 rounded-lg hover:bg-white/10 transition-colors shrink-0"
                     >
-                        <ArrowLeft className="w-5 h-5 text-white/80" />
+                        <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-white/80" />
                     </button>
-                    <h1 className="text-lg font-semibold text-white">
+                    <h1 className="text-base sm:text-lg font-semibold text-white truncate">
                         {board.name}
                     </h1>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2">
                     {/* Filter Button */}
                     <BoardFilter
                         labels={board.labels || []}
@@ -707,16 +707,19 @@ export default function BoardPage() {
                         filters={filters}
                         onFiltersChange={setFilters}
                     />
-                    <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-sm font-medium transition-colors">
+                    <button className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-sm font-medium transition-colors">
                         <Users className="w-4 h-4" />
-                        <span className="hidden sm:inline">Share</span>
+                        <span>Share</span>
+                    </button>
+                    <button className="sm:hidden p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+                        <Users className="w-4 h-4 text-white/80" />
                     </button>
                     <button
                         onClick={() => setShowBoardSettings(true)}
-                        className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                        className="p-1.5 sm:p-2 rounded-lg hover:bg-white/10 transition-colors"
                         title="Board Settings"
                     >
-                        <MoreHorizontal className="w-5 h-5 text-white/80" />
+                        <MoreHorizontal className="w-4 h-4 sm:w-5 sm:h-5 text-white/80" />
                     </button>
                 </div>
             </div>

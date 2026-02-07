@@ -83,7 +83,7 @@ export default function Sidebar() {
             {/* Mobile Menu Button - positioned in navbar area */}
             <button
                 onClick={() => setIsMobileOpen(true)}
-                className="lg:hidden fixed top-3.5 left-4 z-60 p-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-200 shadow-sm"
+                className="md:hidden fixed top-3.5 left-4 z-60 p-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-200 shadow-sm"
                 aria-label="Open menu"
             >
                 <Menu className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
@@ -92,7 +92,7 @@ export default function Sidebar() {
             {/* Mobile Overlay */}
             {isMobileOpen && (
                 <div
-                    className="lg:hidden fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-40 transition-opacity duration-300"
+                    className="md:hidden fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-40 transition-opacity duration-300"
                     onClick={() => setIsMobileOpen(false)}
                 />
             )}
@@ -100,17 +100,17 @@ export default function Sidebar() {
             {/* Sidebar */}
             <aside
                 className={`
-                    fixed lg:relative z-50 lg:z-auto
+                    fixed md:relative z-50 md:z-auto
                     flex flex-col bg-zinc-50 dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800/80
                     h-full transition-all duration-300 ease-out
-                    ${isCollapsed ? "lg:w-18" : "lg:w-64"}
-                    ${isMobileOpen ? "translate-x-0 w-72" : "-translate-x-full lg:translate-x-0"}
+                    ${isCollapsed ? "md:w-18" : "md:w-64"}
+                    ${isMobileOpen ? "translate-x-0 w-72" : "-translate-x-full md:translate-x-0"}
                 `}
             >
                 {/* Mobile Close Button */}
                 <button
                     onClick={() => setIsMobileOpen(false)}
-                    className="lg:hidden absolute top-4 right-4 p-2 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
+                    className="md:hidden absolute top-4 right-4 p-2 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
                     aria-label="Close menu"
                 >
                     <X className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
@@ -123,11 +123,11 @@ export default function Sidebar() {
                             Axon
                         </span>
                     )}
-                    {/* Desktop Toggle Button */}
+                {/* Desktop Toggle Button */}
                     <button
                         onClick={() => setIsCollapsed(!isCollapsed)}
                         className={`
-                            hidden lg:flex items-center justify-center
+                            hidden md:flex items-center justify-center
                             w-8 h-8 rounded-lg
                             hover:bg-zinc-200 dark:hover:bg-zinc-800
                             transition-all duration-200 group
