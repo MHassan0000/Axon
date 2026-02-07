@@ -11,7 +11,7 @@ import {
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { syncCurrentUser, createWorkspace, createBoard, getBoards } from "@/lib/actions";
+import { syncCurrentUser, createWorkspace, createBoard, getBoards, getWorkspaceMembers } from "@/lib/actions";
 import { useWorkspaces } from "@/lib/context/WorkspaceContext";
 import { workspaceNameSchema, boardNameSchema, boardColorSchema } from "@/lib/validations";
 import type { Board, Workspace } from "@/lib/types/database";
@@ -51,6 +51,7 @@ function SearchParamsHandler({
 export default function DashboardPage() {
     const { workspaces, loading: loadingWorkspaces, addWorkspace } = useWorkspaces();
     const [boards, setBoards] = useState<Board[]>([]);
+    const [teamMembersCount, setTeamMembersCount] = useState<number>(0);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
     const [showCreateWorkspaceModal, setShowCreateWorkspaceModal] = useState(false);
@@ -82,6 +83,14 @@ export default function DashboardPage() {
                 if (workspaces.length > 0) {
                     const b = await getBoards(workspaces[0].id);
                     setBoards(b);
+
+                    // Fetch team members count across all workspaces
+                    const membersPromises = workspaces.map(ws => getWorkspaceMembers(ws.id));
+                    const membersArrays = await Promise.all(membersPromises);
+                    // Get unique members across all workspaces
+                    const uniqueMembers = new Set<string>();
+                    membersArrays.flat().forEach(m => uniqueMembers.add(m.id));
+                    setTeamMembersCount(uniqueMembers.size);
                 }
             } catch (error) {
                 console.error("Error initializing dashboard:", error);
@@ -276,7 +285,7 @@ export default function DashboardPage() {
                         <section className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-zinc-200 dark:border-zinc-800/50">
                             <StatCard title="Workspaces" value={workspaces.length.toString()} />
                             <StatCard title="Boards" value={boards.length.toString()} />
-                            <StatCard title="Team Members" value="—" />
+                            <StatCard title="Team Members" value={teamMembersCount.toString()} />
                         </section>
                     </div>
                 )}

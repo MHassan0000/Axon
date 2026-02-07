@@ -74,6 +74,7 @@ export default function BoardPage() {
     const [creatingList, setCreatingList] = useState(false);
     const [addingCardToList, setAddingCardToList] = useState<string | null>(null);
     const [newCardTitle, setNewCardTitle] = useState("");
+    const [creatingCard, setCreatingCard] = useState(false);
     const [selectedCard, setSelectedCard] = useState<CardWithRelations | null>(null);
     const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
     const [showBoardSettings, setShowBoardSettings] = useState(false);
@@ -303,8 +304,9 @@ export default function BoardPage() {
 
     // Create Card Handler
     const handleAddCard = async (listId: string) => {
-        if (!newCardTitle.trim() || !board) return;
+        if (!newCardTitle.trim() || !board || creatingCard) return;
 
+        setCreatingCard(true);
         try {
             const card = await createCard({ list_id: listId, title: newCardTitle });
             if (card) {
@@ -324,6 +326,8 @@ export default function BoardPage() {
         } catch (error) {
             console.error("Error creating card:", error);
             toast.error("Failed to create card");
+        } finally {
+            setCreatingCard(false);
         }
     };
 
@@ -473,6 +477,7 @@ export default function BoardPage() {
                                                         dragHandleProps={provided.dragHandleProps}
                                                         onAddCard={() => setAddingCardToList(list.id)}
                                                         addingCard={addingCardToList === list.id}
+                                                        creatingCard={creatingCard}
                                                         newCardTitle={newCardTitle}
                                                         setNewCardTitle={setNewCardTitle}
                                                         onSubmitCard={() => handleAddCard(list.id)}
@@ -620,6 +625,7 @@ interface ListColumnProps {
     dragHandleProps: any;
     onAddCard: () => void;
     addingCard: boolean;
+    creatingCard: boolean;
     newCardTitle: string;
     setNewCardTitle: (title: string) => void;
     onSubmitCard: () => void;
@@ -635,6 +641,7 @@ function ListColumn({
     dragHandleProps,
     onAddCard,
     addingCard,
+    creatingCard,
     newCardTitle,
     setNewCardTitle,
     onSubmitCard,
@@ -797,24 +804,28 @@ function ListColumn({
                                         value={newCardTitle}
                                         onChange={(e) => setNewCardTitle(e.target.value)}
                                         onKeyDown={(e) => {
-                                            if (e.key === "Enter" && !e.shiftKey) {
+                                            if (e.key === "Enter" && !e.shiftKey && !creatingCard) {
                                                 e.preventDefault();
                                                 onSubmitCard();
                                             }
                                         }}
-                                        className="w-full px-2 py-1.5 bg-transparent text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 text-sm resize-none focus:outline-none min-h-15"
+                                        className="w-full px-2 py-1.5 bg-transparent text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 text-sm resize-none focus:outline-none min-h-15 disabled:opacity-50"
                                         autoFocus
+                                        disabled={creatingCard}
                                     />
                                     <div className="flex gap-2 mt-2">
                                         <button
                                             onClick={onSubmitCard}
-                                            className="px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg text-sm font-medium hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors"
+                                            disabled={creatingCard || !newCardTitle.trim()}
+                                            className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg text-sm font-medium hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
+                                            {creatingCard && <Loader2 className="w-4 h-4 animate-spin" />}
                                             Add Card
                                         </button>
                                         <button
                                             onClick={onCancelAdd}
-                                            className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                                            disabled={creatingCard}
+                                            className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors disabled:opacity-50"
                                         >
                                             <X className="w-5 h-5 text-zinc-500" />
                                         </button>
