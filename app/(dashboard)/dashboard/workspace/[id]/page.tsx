@@ -112,32 +112,6 @@ export default function WorkspacePage() {
 
         setCreating(true);
 
-        // Optimistic update: Create temp board and close modal immediately
-        const tempId = `temp-${Date.now()}`;
-        const tempBoard: Board = {
-            id: tempId,
-            workspace_id: workspaceId,
-            name: nameValidation.data,
-            description: null,
-            background_color: newBoardColor,
-            background_image: newBoardImage,
-            is_private: false,
-            position: workspace.boards.length,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-        };
-
-        // Update UI immediately
-        setWorkspace({
-            ...workspace,
-            boards: [...workspace.boards, tempBoard]
-        });
-        setNewBoardName("");
-        setNewBoardColor("#3b82f6");
-        setNewBoardImage(null);
-        setShowCreateModal(false);
-
-        // Then sync with server
         try {
             const result = await createBoard({
                 workspace_id: workspaceId,
@@ -146,37 +120,20 @@ export default function WorkspacePage() {
                 background_image: newBoardImage || undefined,
             });
             if (result.board) {
-                // Replace temp board with real one
-                setWorkspace((prev) => {
-                    if (!prev) return prev;
-                    return {
-                        ...prev,
-                        boards: prev.boards.map((b) => 
-                            b.id === tempId ? result.board! : b
-                        )
-                    };
+                // Add board to UI after successful creation
+                setWorkspace({
+                    ...workspace,
+                    boards: [...workspace.boards, result.board]
                 });
+                setNewBoardName("");
+                setNewBoardColor("#3b82f6");
+                setNewBoardImage(null);
+                setShowCreateModal(false);
                 toast.success("Board created");
             } else {
-                // Rollback on error
-                setWorkspace((prev) => {
-                    if (!prev) return prev;
-                    return {
-                        ...prev,
-                        boards: prev.boards.filter((b) => b.id !== tempId)
-                    };
-                });
                 toast.error(result.error || "Failed to create board");
             }
         } catch {
-            // Rollback on error
-            setWorkspace((prev) => {
-                if (!prev) return prev;
-                return {
-                    ...prev,
-                    boards: prev.boards.filter((b) => b.id !== tempId)
-                };
-            });
             toast.error("Failed to create board");
         } finally {
             setCreating(false);
