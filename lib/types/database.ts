@@ -35,6 +35,7 @@ export interface Board {
   description: string | null;
   is_private: boolean;
   background_color: string;
+  background_image: string | null;
   position: number;
   created_at: string;
   updated_at: string;
@@ -188,6 +189,7 @@ export interface CreateBoardInput {
   description?: string;
   is_private?: boolean;
   background_color?: string;
+  background_image?: string;
 }
 
 export interface UpdateBoardInput {
@@ -195,6 +197,7 @@ export interface UpdateBoardInput {
   description?: string;
   is_private?: boolean;
   background_color?: string;
+  background_image?: string | null;
   position?: number;
 }
 

@@ -31,6 +31,7 @@ export {
   deleteBoard,
   createLabel,
   deleteLabel,
+  uploadBoardBackground,
 } from "./boards";
 
 // List actions

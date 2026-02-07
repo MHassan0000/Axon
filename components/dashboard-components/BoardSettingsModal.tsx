@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
     X,
     Settings,
@@ -11,6 +11,8 @@ import {
     Plus,
     Loader2,
     AlertTriangle,
+    ImagePlus,
+    Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -19,6 +21,7 @@ import {
     deleteBoard,
     createLabel,
     deleteLabel,
+    uploadBoardBackground,
 } from "@/lib/actions";
 import { boardNameSchema, labelNameSchema, labelColorSchema } from "@/lib/validations";
 import type { Board, Label } from "@/lib/types/database";
@@ -67,10 +70,17 @@ export function BoardSettingsModal({
 }: BoardSettingsModalProps) {
     const router = useRouter();
 
+    // Refs
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     // State
     const [activeTab, setActiveTab] = useState<"general" | "labels" | "danger">("general");
     const [boardName, setBoardName] = useState(board.name);
     const [boardColor, setBoardColor] = useState(board.background_color || PRESET_COLORS[4]);
+    const [backgroundImage, setBackgroundImage] = useState<string | null>(board.background_image || null);
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(board.background_image || null);
+    const [uploadingImage, setUploadingImage] = useState(false);
     const [saving, setSaving] = useState(false);
 
     // Labels state
@@ -83,6 +93,39 @@ export function BoardSettingsModal({
     const [deleteConfirmation, setDeleteConfirmation] = useState("");
     const [deleting, setDeleting] = useState(false);
 
+    // Handle image selection
+    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validate file type
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+        if (!allowedTypes.includes(file.type)) {
+            toast.error("Please select a valid image (JPEG, PNG, WebP, or GIF)");
+            return;
+        }
+
+        // Validate file size (5MB max)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("Image must be less than 5MB");
+            return;
+        }
+
+        setImageFile(file);
+        const previewUrl = URL.createObjectURL(file);
+        setImagePreview(previewUrl);
+    };
+
+    // Remove selected/current image
+    const handleRemoveImage = () => {
+        setImageFile(null);
+        setImagePreview(null);
+        setBackgroundImage(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
+
     // Save board settings
     const handleSaveBoard = async () => {
         const validation = boardNameSchema.safeParse(boardName);
@@ -93,9 +136,28 @@ export function BoardSettingsModal({
 
         setSaving(true);
         try {
+            let finalImageUrl: string | null = backgroundImage;
+
+            // Upload new image if selected
+            if (imageFile) {
+                setUploadingImage(true);
+                const formData = new FormData();
+                formData.append("file", imageFile);
+                const uploadResult = await uploadBoardBackground(board.workspace_id, formData);
+                setUploadingImage(false);
+
+                if (uploadResult.error) {
+                    toast.error(uploadResult.error);
+                    setSaving(false);
+                    return;
+                }
+                finalImageUrl = uploadResult.url;
+            }
+
             const updated = await updateBoard(board.id, {
                 name: validation.data,
                 background_color: boardColor,
+                background_image: finalImageUrl,
             });
             if (updated) {
                 onUpdate(updated);
@@ -105,6 +167,7 @@ export function BoardSettingsModal({
             toast.error("Failed to update board");
         } finally {
             setSaving(false);
+            setUploadingImage(false);
         }
     };
 
@@ -261,14 +324,59 @@ export function BoardSettingsModal({
                                 </div>
                             </div>
 
+                            {/* Background Image */}
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                                    Background Image (optional)
+                                </label>
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                                    Upload a custom background image. This will override the board color.
+                                </p>
+                                
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp,image/gif"
+                                    onChange={handleImageSelect}
+                                    className="hidden"
+                                />
+
+                                {imagePreview ? (
+                                    <div className="relative">
+                                        <div
+                                            className="w-full h-32 rounded-lg bg-cover bg-center border border-zinc-200 dark:border-zinc-700"
+                                            style={{ backgroundImage: `url(${imagePreview})` }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleRemoveImage}
+                                            className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                                        >
+                                            <X className="w-4 h-4 text-white" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="w-full h-24 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-zinc-400 dark:hover:border-zinc-500 transition-colors"
+                                    >
+                                        <ImagePlus className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
+                                        <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                                            Click to upload image
+                                        </span>
+                                    </button>
+                                )}
+                            </div>
+
                             {/* Save Button */}
                             <button
                                 onClick={handleSaveBoard}
-                                disabled={saving || !boardName.trim()}
+                                disabled={saving || uploadingImage || !boardName.trim()}
                                 className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg font-medium hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50"
                             >
-                                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                Save Changes
+                                {(saving || uploadingImage) && <Loader2 className="w-4 h-4 animate-spin" />}
+                                {uploadingImage ? "Uploading image..." : "Save Changes"}
                             </button>
                         </div>
                     )}

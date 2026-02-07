@@ -80,6 +80,7 @@ export async function createBoard(input: CreateBoardInput): Promise<{ board: Boa
       description: validData.description || null,
       is_private: false,
       background_color: validData.background_color || "#1f1f23",
+      background_image: validData.background_image || null,
       position,
     })
     .select()
@@ -441,4 +442,75 @@ export async function deleteLabel(labelId: string): Promise<boolean> {
   }
 
   return true;
+}
+
+const BOARD_BACKGROUNDS_BUCKET = "board-backgrounds";
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+/**
+ * Upload a background image for a board
+ * Returns the public URL of the uploaded image
+ */
+export async function uploadBoardBackground(
+  workspaceId: string,
+  formData: FormData
+): Promise<{ url: string | null; error?: string }> {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return { url: null, error: "User not authenticated" };
+  }
+
+  // Verify user has access to this workspace
+  const access = await verifyWorkspaceAccess(workspaceId);
+  if (!access.allowed) {
+    return { url: null, error: "You don't have access to this workspace" };
+  }
+
+  const file = formData.get("file") as File;
+  if (!file) {
+    return { url: null, error: "No file provided" };
+  }
+
+  // Validate file size
+  if (file.size > MAX_IMAGE_SIZE) {
+    return { url: null, error: "Image must be smaller than 5MB" };
+  }
+
+  // Validate file type
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    return { url: null, error: "Only JPEG, PNG, WebP and GIF images are allowed" };
+  }
+
+  const supabase = await createClient();
+
+  // Generate unique file path
+  const timestamp = Date.now();
+  const ext = file.name.split('.').pop() || 'jpg';
+  const filePath = `${workspaceId}/${timestamp}.${ext}`;
+
+  // Convert File to ArrayBuffer then to Uint8Array for upload
+  const arrayBuffer = await file.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+
+  // Upload to Supabase Storage
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from(BOARD_BACKGROUNDS_BUCKET)
+    .upload(filePath, uint8Array, {
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    console.error("Error uploading board background:", uploadError);
+    return { url: null, error: "Failed to upload image" };
+  }
+
+  // Get public URL
+  const { data: urlData } = supabase.storage
+    .from(BOARD_BACKGROUNDS_BUCKET)
+    .getPublicUrl(filePath);
+
+  return { url: urlData.publicUrl };
 }

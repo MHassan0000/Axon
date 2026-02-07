@@ -9,7 +9,6 @@ import {
     Users,
     FolderKanban,
     LayoutGrid,
-    Loader2,
     Calendar,
     Activity,
     ArrowUpRight,
@@ -34,6 +33,7 @@ import {
 } from "recharts";
 import { useWorkspaces } from "@/lib/context/WorkspaceContext";
 import { getBoards, getBoardWithLists, getRecentActivity } from "@/lib/actions";
+import { AnalyticsPageSkeleton } from "@/components/ui/Skeleton";
 import type { Board, CardWithRelations, ActivityLog } from "@/lib/types/database";
 
 interface AnalyticsData {
@@ -180,13 +180,7 @@ export default function AnalyticsPage() {
         : 0;
 
     if (loading || loadingWorkspaces) {
-        return (
-            <div className="flex flex-col h-full bg-white dark:bg-black">
-                <div className="flex items-center justify-center h-full">
-                    <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
-                </div>
-            </div>
-        );
+        return <AnalyticsPageSkeleton />;
     }
 
     const stats = [
@@ -509,27 +503,36 @@ export default function AnalyticsPage() {
                         </h3>
                         {boards.length > 0 ? (
                             <div className="space-y-3">
-                                {boards.slice(0, 5).map((board) => (
-                                    <div
-                                        key={board.id}
-                                        className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800/50 rounded-lg"
-                                    >
+                                {boards.slice(0, 5).map((board) => {
+                                    const thumbnailStyle = board.background_image
+                                        ? {
+                                            backgroundImage: `url(${board.background_image})`,
+                                            backgroundSize: "cover",
+                                            backgroundPosition: "center",
+                                        }
+                                        : {
+                                            backgroundColor: board.background_color || "#6366f1",
+                                        };
+                                    return (
                                         <div
-                                            className="w-8 h-8 rounded shrink-0"
-                                            style={{
-                                                backgroundColor: board.background_color || "#6366f1",
-                                            }}
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                                                {board.name}
-                                            </p>
-                                            <p className="text-xs text-zinc-500">
-                                                Created {new Date(board.created_at).toLocaleDateString()}
-                                            </p>
+                                            key={board.id}
+                                            className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800/50 rounded-lg"
+                                        >
+                                            <div
+                                                className="w-8 h-8 rounded shrink-0"
+                                                style={thumbnailStyle}
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                                                    {board.name}
+                                                </p>
+                                                <p className="text-xs text-zinc-500">
+                                                    Created {new Date(board.created_at).toLocaleDateString()}
+                                                </p>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <p className="text-sm text-zinc-500 text-center py-8">

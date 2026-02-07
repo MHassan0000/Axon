@@ -413,3 +413,113 @@ export function TeamPageSkeleton() {
         </div>
     );
 }
+
+export function AnalyticsPageSkeleton() {
+    return (
+        <div className="flex flex-col h-full bg-white dark:bg-black overflow-hidden">
+            <SkeletonPageHeader />
+            <div className="flex-1 overflow-auto p-4 sm:p-6">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    {[1, 2, 3, 4].map((i) => (
+                        <div
+                            key={i}
+                            className="relative overflow-hidden p-5 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl"
+                        >
+                            <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                    <Skeleton className="h-4 w-24 mb-2" />
+                                    <Skeleton className="h-8 w-16" />
+                                </div>
+                                <Skeleton className="w-5 h-5" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Charts Row 1 */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div className="p-5 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Skeleton className="w-4 h-4" />
+                            <Skeleton className="h-4 w-32" />
+                        </div>
+                        <Skeleton className="h-64 w-full rounded-lg" />
+                    </div>
+                    <div className="p-5 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Skeleton className="w-4 h-4" />
+                            <Skeleton className="h-4 w-40" />
+                        </div>
+                        <Skeleton className="h-64 w-full rounded-lg" />
+                    </div>
+                </div>
+
+                {/* Charts Row 2 */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="p-5 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Skeleton className="w-4 h-4" />
+                            <Skeleton className="h-4 w-36" />
+                        </div>
+                        <Skeleton className="h-64 w-full rounded-lg" />
+                    </div>
+                    <div className="p-5 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Skeleton className="w-4 h-4" />
+                            <Skeleton className="h-4 w-28" />
+                        </div>
+                        <div className="space-y-4">
+                            {[1, 2, 3, 4].map((i) => (
+                                <div key={i} className="flex items-center justify-between p-3 bg-white dark:bg-zinc-800/50 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <Skeleton className="w-3 h-3 rounded-full" />
+                                        <Skeleton className="h-4 w-20" />
+                                    </div>
+                                    <Skeleton className="h-6 w-8" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export function ProjectsPageSkeleton() {
+    return (
+        <div className="flex flex-col h-full bg-white dark:bg-black overflow-hidden">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/80">
+                <div>
+                    <Skeleton className="h-6 w-24 mb-2" />
+                    <Skeleton className="h-4 w-48" />
+                </div>
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <Skeleton className="h-10 w-full sm:w-64 rounded-lg" />
+                    <Skeleton className="h-10 w-20 rounded-lg" />
+                </div>
+            </div>
+            {/* Content */}
+            <div className="flex-1 overflow-auto p-4 sm:p-6">
+                <div className="space-y-8">
+                    {[1, 2].map((section) => (
+                        <section key={section}>
+                            <div className="flex items-center gap-2 mb-4">
+                                <Skeleton className="w-4 h-4" />
+                                <Skeleton className="h-4 w-32" />
+                                <Skeleton className="h-3 w-8" />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                {[1, 2, 3, 4].map((i) => (
+                                    <SkeletonBoardCard key={i} />
+                                ))}
+                            </div>
+                        </section>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}

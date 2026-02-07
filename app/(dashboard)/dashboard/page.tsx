@@ -1,16 +1,18 @@
 "use client";
 
-import React, { useEffect, useState, Suspense, useCallback, useMemo, useTransition } from "react";
+import React, { useEffect, useState, Suspense, useCallback, useMemo, useTransition, useRef } from "react";
 import {
     FolderKanban,
     Plus,
     Sparkles,
-    LayoutGrid
+    LayoutGrid,
+    Loader2,
+    X,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { syncCurrentUser, createWorkspace, createBoard, getBoards, getWorkspaceMembers } from "@/lib/actions";
+import { syncCurrentUser, createWorkspace, createBoard, getBoards, getWorkspaceMembers, uploadBoardBackground } from "@/lib/actions";
 import { useWorkspaces } from "@/lib/context/WorkspaceContext";
 import { workspaceNameSchema, boardNameSchema, boardColorSchema } from "@/lib/validations";
 import { DashboardPageSkeleton, SkeletonWorkspaceCard, SkeletonBoardCard, SkeletonStat } from "@/components/ui/Skeleton";
@@ -60,7 +62,10 @@ export default function DashboardPage() {
     const [newBoardName, setNewBoardName] = useState("");
     const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
     const [newBoardColor, setNewBoardColor] = useState("#3b82f6");
+    const [newBoardImage, setNewBoardImage] = useState<string | null>(null);
+    const [uploadingImage, setUploadingImage] = useState(false);
     const [isPending, startTransition] = useTransition();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const router = useRouter();
 
@@ -151,6 +156,50 @@ export default function DashboardPage() {
         }
     };
 
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!selectedWorkspaceId) {
+            toast.error("Please select a workspace first");
+            return;
+        }
+
+        // Validate file type
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+        if (!allowedTypes.includes(file.type)) {
+            toast.error("Only JPEG, PNG, WebP and GIF images are allowed");
+            return;
+        }
+
+        // Validate file size (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("Image must be smaller than 5MB");
+            return;
+        }
+
+        setUploadingImage(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const result = await uploadBoardBackground(selectedWorkspaceId, formData);
+            if (result.url) {
+                setNewBoardImage(result.url);
+                toast.success("Image uploaded");
+            } else {
+                toast.error(result.error || "Failed to upload image");
+            }
+        } catch {
+            toast.error("Failed to upload image");
+        } finally {
+            setUploadingImage(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+        }
+    };
+
     const handleCreateBoard = async () => {
         // Validate inputs
         const nameValidation = boardNameSchema.safeParse(newBoardName);
@@ -176,12 +225,15 @@ export default function DashboardPage() {
         setShowCreateBoardModal(false);
         const boardName = nameValidation.data;
         setNewBoardName("");
+        setNewBoardColor("#3b82f6");
+        setNewBoardImage(null);
 
         try {
             const result = await createBoard({
                 workspace_id: selectedWorkspaceId,
                 name: boardName,
                 background_color: newBoardColor,
+                background_image: newBoardImage || undefined,
             });
             if (result.board) {
                 toast.success("Board created successfully");
@@ -356,7 +408,12 @@ export default function DashboardPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
                     <div
                         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                        onClick={() => setShowCreateBoardModal(false)}
+                        onClick={() => {
+                            setShowCreateBoardModal(false);
+                            setNewBoardName("");
+                            setNewBoardColor("#3b82f6");
+                            setNewBoardImage(null);
+                        }}
                     />
                     <div className="relative bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 w-full max-w-md shadow-2xl">
                         <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
@@ -391,29 +448,78 @@ export default function DashboardPage() {
                             </select>
                         </div>
 
-                        {/* Color Selection */}
+                        {/* Background Selection */}
                         <div className="mb-6">
                             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Background Color
+                                Background
                             </label>
                             <div className="flex flex-wrap gap-2">
+                                {/* Color Options */}
                                 {boardColors.map((color) => (
                                     <button
                                         key={color}
-                                        onClick={() => setNewBoardColor(color)}
-                                        className={`w-8 h-8 rounded-lg transition-all ${newBoardColor === color
-                                            ? "ring-2 ring-offset-2 ring-zinc-500 dark:ring-offset-zinc-900 scale-110"
-                                            : "hover:scale-105"
-                                            }`}
+                                        onClick={() => {
+                                            setNewBoardColor(color);
+                                            setNewBoardImage(null);
+                                        }}
+                                        className={`w-8 h-8 rounded-lg transition-all ${
+                                            !newBoardImage && newBoardColor === color
+                                                ? "ring-2 ring-offset-2 ring-zinc-500 dark:ring-offset-zinc-900 scale-110"
+                                                : "hover:scale-105"
+                                        }`}
                                         style={{ backgroundColor: color }}
                                     />
                                 ))}
+
+                                {/* Image Upload Button */}
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploadingImage || !selectedWorkspaceId}
+                                    className={`w-8 h-8 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-600 flex items-center justify-center transition-all hover:border-zinc-400 dark:hover:border-zinc-500 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                        newBoardImage ? "ring-2 ring-offset-2 ring-zinc-500 dark:ring-offset-zinc-900 scale-110" : ""
+                                    }`}
+                                    title="Upload custom image"
+                                >
+                                    {uploadingImage ? (
+                                        <Loader2 className="w-4 h-4 text-zinc-400 animate-spin" />
+                                    ) : (
+                                        <Plus className="w-4 h-4 text-zinc-400" />
+                                    )}
+                                </button>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp,image/gif"
+                                    onChange={handleImageUpload}
+                                    className="hidden"
+                                />
                             </div>
+
+                            {/* Image Preview */}
+                            {newBoardImage && (
+                                <div className="mt-3 relative">
+                                    <div 
+                                        className="w-full h-24 rounded-lg bg-cover bg-center border border-zinc-200 dark:border-zinc-700"
+                                        style={{ backgroundImage: `url(${newBoardImage})` }}
+                                    />
+                                    <button
+                                        onClick={() => setNewBoardImage(null)}
+                                        className="absolute -top-2 -right-2 p-1 bg-red-500 rounded-full text-white hover:bg-red-600 transition-colors"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex justify-end gap-3">
                             <button
-                                onClick={() => setShowCreateBoardModal(false)}
+                                onClick={() => {
+                                    setShowCreateBoardModal(false);
+                                    setNewBoardName("");
+                                    setNewBoardColor("#3b82f6");
+                                    setNewBoardImage(null);
+                                }}
                                 className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
                             >
                                 Cancel
@@ -423,6 +529,7 @@ export default function DashboardPage() {
                                 disabled={!newBoardName.trim() || !selectedWorkspaceId || creating}
                                 className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg font-medium text-sm hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
+                                {creating && <Loader2 className="w-4 h-4 animate-spin" />}
                                 Create Board
                             </button>
                         </div>
@@ -464,11 +571,19 @@ const WorkspaceCard = React.memo(function WorkspaceCard({ workspace }: { workspa
 
 /* Board Card Component - Memoized */
 const BoardCard = React.memo(function BoardCard({ board }: { board: Board }) {
+    const backgroundStyle = board.background_image
+        ? {
+            backgroundImage: `url(${board.background_image})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }
+        : { backgroundColor: board.background_color || "#1f1f23" };
+
     return (
         <Link
             href={`/dashboard/board/${board.id}`}
             className="group relative overflow-hidden p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-lg transition-all"
-            style={{ backgroundColor: board.background_color || "#1f1f23" }}
+            style={backgroundStyle}
         >
             <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
             <div className="relative z-10">

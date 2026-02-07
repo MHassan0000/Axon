@@ -40,10 +40,17 @@ export const boardColorSchema = z
   .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format")
   .optional();
 
+export const boardImageSchema = z
+  .string()
+  .url("Invalid image URL")
+  .optional()
+  .nullable();
+
 export const createBoardSchema = z.object({
   name: boardNameSchema,
   workspace_id: z.string().uuid("Invalid workspace ID"),
   background_color: boardColorSchema,
+  background_image: boardImageSchema,
   description: z.string().max(500).optional(),
 });
 
@@ -51,6 +58,7 @@ export const updateBoardSchema = z.object({
   name: boardNameSchema.optional(),
   description: z.string().max(500).optional(),
   background_color: boardColorSchema,
+  background_image: boardImageSchema,
 });
 
 // =====================================================

@@ -672,10 +672,18 @@ export default function BoardPage() {
         );
     }
 
+    const boardBackgroundStyle = board.background_image
+        ? {
+            backgroundImage: `url(${board.background_image})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }
+        : { backgroundColor: board.background_color || "#0a0a0a" };
+
     return (
         <div
             className="flex flex-col h-full transition-colors duration-200"
-            style={{ backgroundColor: board.background_color || "#0a0a0a" }}
+            style={boardBackgroundStyle}
         >
             {/* Board Header */}
             <div className="flex items-center justify-between px-4 py-3 bg-black/30 backdrop-blur-sm border-b border-white/10">

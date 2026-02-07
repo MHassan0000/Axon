@@ -8,13 +8,13 @@ import {
     Filter,
     Grid3X3,
     List,
-    Loader2,
     FolderKanban,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useWorkspaces } from "@/lib/context/WorkspaceContext";
 import { getBoards, createBoard } from "@/lib/actions";
+import { ProjectsPageSkeleton } from "@/components/ui/Skeleton";
 import type { Board } from "@/lib/types/database";
 
 interface BoardsByWorkspace {
@@ -73,13 +73,7 @@ export default function ProjectsPage() {
     const totalBoards = boardsByWorkspace.reduce((acc, ws) => acc + ws.boards.length, 0);
 
     if (loading || loadingWorkspaces) {
-        return (
-            <div className="flex flex-col h-full bg-white dark:bg-black">
-                <div className="flex items-center justify-center h-full">
-                    <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
-                </div>
-            </div>
-        );
+        return <ProjectsPageSkeleton />;
     }
 
     return (
@@ -183,6 +177,14 @@ export default function ProjectsPage() {
 
 /* Board Card Component */
 function BoardCard({ board, viewMode }: { board: Board; viewMode: "grid" | "list" }) {
+    const backgroundStyle = board.background_image
+        ? {
+            backgroundImage: `url(${board.background_image})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }
+        : { backgroundColor: board.background_color || "#6366f1" };
+
     if (viewMode === "list") {
         return (
             <Link
@@ -190,8 +192,8 @@ function BoardCard({ board, viewMode }: { board: Board; viewMode: "grid" | "list
                 className="flex items-center gap-4 p-3 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:border-zinc-300 dark:hover:border-zinc-700 transition-all"
             >
                 <div
-                    className="w-10 h-10 rounded-lg shrink-0"
-                    style={{ backgroundColor: board.background_color || "#6366f1" }}
+                    className="w-10 h-10 rounded-lg shrink-0 bg-cover bg-center"
+                    style={backgroundStyle}
                 />
                 <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-zinc-900 dark:text-zinc-100 truncate">
@@ -209,7 +211,7 @@ function BoardCard({ board, viewMode }: { board: Board; viewMode: "grid" | "list
         <Link
             href={`/dashboard/board/${board.id}`}
             className="group relative overflow-hidden p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-lg transition-all min-h-30"
-            style={{ backgroundColor: board.background_color || "#6366f1" }}
+            style={backgroundStyle}
         >
             <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
             <div className="relative z-10">
