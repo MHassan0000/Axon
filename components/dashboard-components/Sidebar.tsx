@@ -55,7 +55,7 @@ export default function Sidebar() {
         mainNavItems.forEach((item) => {
             router.prefetch(item.href);
         });
-        
+
         // Prefetch workspace routes
         workspaces.slice(0, 5).forEach((workspace) => {
             router.prefetch(`/dashboard/workspace/${workspace.id}`);
@@ -108,38 +108,30 @@ export default function Sidebar() {
                     <X className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
                 </button>
 
-                {/* Desktop Toggle Button */}
-                <button
-                    onClick={() => setIsCollapsed(!isCollapsed)}
-                    className={`
-                        hidden lg:flex items-center justify-center
-                        absolute -right-3 top-6 z-10
-                        w-6 h-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md
-                        hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600
-                        transition-all duration-200 group
-                        shadow-md
-                    `}
-                    aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                >
-                    {isCollapsed ? (
-                        <PanelLeft className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors" />
-                    ) : (
-                        <PanelLeftClose className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors" />
-                    )}
-                </button>
-
                 {/* Sidebar Header */}
-                <div className={`flex items-center h-14 border-b border-zinc-200 dark:border-zinc-800/80 px-4 ${isCollapsed ? "justify-center" : ""}`}>
+                <div className={`flex items-center h-14 border-b border-zinc-200 dark:border-zinc-800/80 px-4 ${isCollapsed ? "justify-center" : "justify-between"}`}>
                     {!isCollapsed && (
                         <span className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
                             Axon
                         </span>
                     )}
-                    {isCollapsed && (
-                        <div className="w-8 h-8 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center">
-                            <span className="text-sm font-bold text-zinc-800 dark:text-zinc-300">A</span>
-                        </div>
-                    )}
+                    {/* Desktop Toggle Button */}
+                    <button
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                        className={`
+                            hidden lg:flex items-center justify-center
+                            w-8 h-8 rounded-lg
+                            hover:bg-zinc-200 dark:hover:bg-zinc-800
+                            transition-all duration-200 group
+                        `}
+                        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    >
+                        {isCollapsed ? (
+                            <PanelLeft className="w-4 h-4 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors" />
+                        ) : (
+                            <PanelLeftClose className="w-4 h-4 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors" />
+                        )}
+                    </button>
                 </div>
 
                 {/* Main Navigation */}

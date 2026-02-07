@@ -102,3 +102,12 @@ export type {
   SearchResultType,
   SearchResponse,
 } from "./search";
+
+// Attachment actions
+export {
+  uploadAttachment,
+  getAttachments,
+  deleteAttachment,
+  prepareAttachment,
+  uploadPreparedAttachment,
+} from "./attachments";

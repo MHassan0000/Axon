@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -28,6 +28,9 @@ import {
     Tag,
     Settings,
     Copy,
+    Upload,
+    File,
+    Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -46,6 +49,7 @@ import {
     getWorkspaceMembers,
     createLabel,
     deleteLabel,
+    uploadPreparedAttachment,
 } from "@/lib/actions";
 import { useBoardRealtime } from "@/lib/hooks/useRealtime";
 import { CardModal } from "@/components/dashboard-components/CardModal";
@@ -58,6 +62,12 @@ import type {
     Label,
 } from "@/lib/types/database";
 import { BoardSettingsModal } from "@/components/dashboard-components/BoardSettingsModal";
+
+// File attachment type for card creation
+type PendingFile = {
+    file: File;
+    preview?: string;
+};
 
 // Type for workspace members from the API
 type WorkspaceMember = { id: string; name: string | null; email: string; avatar_url: string | null; role: string };
@@ -73,6 +83,7 @@ export default function BoardPage() {
     const [newListName, setNewListName] = useState("");
     const [addingCardToList, setAddingCardToList] = useState<string | null>(null);
     const [newCardTitle, setNewCardTitle] = useState("");
+    const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
     const [selectedCard, setSelectedCard] = useState<CardWithRelations | null>(null);
     const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
     const [showBoardSettings, setShowBoardSettings] = useState(false);
@@ -347,7 +358,6 @@ export default function BoardPage() {
                         ),
                     };
                 });
-                toast.success("List created");
             } else {
                 // Remove temp list on failure
                 setBoard((prev) => {
@@ -373,8 +383,8 @@ export default function BoardPage() {
         }
     };
 
-    // Create Card Handler - Instant optimistic update
-    const handleAddCard = async (listId: string) => {
+    // Create Card Handler - Instant optimistic update with file upload support
+    const handleAddCard = async (listId: string, filesToUpload?: PendingFile[]) => {
         if (!newCardTitle.trim() || !board) return;
 
         // Don't allow adding to temp lists
@@ -387,6 +397,7 @@ export default function BoardPage() {
         if (!list) return;
 
         const tempId = `temp-card-${Date.now()}`;
+        const hasFiles = filesToUpload && filesToUpload.length > 0;
         const tempCard: CardWithRelations = {
             id: tempId,
             list_id: listId,
@@ -400,7 +411,7 @@ export default function BoardPage() {
             labels: [],
             assignees: [],
             comments_count: 0,
-            attachments_count: 0,
+            attachments_count: hasFiles ? filesToUpload.length : 0,
         };
 
         // Immediately update UI
@@ -413,11 +424,36 @@ export default function BoardPage() {
             ),
         });
         setNewCardTitle("");
+        setPendingFiles([]);
         setAddingCardToList(null);
 
         try {
             const card = await createCard({ list_id: listId, title: tempCard.title });
             if (card) {
+                // Upload files if any
+                if (hasFiles) {
+                    const uploadPromises = filesToUpload.map(async (pf) => {
+                        const arrayBuffer = await pf.file.arrayBuffer();
+                        const base64 = btoa(
+                            new Uint8Array(arrayBuffer).reduce(
+                                (data, byte) => data + String.fromCharCode(byte),
+                                ""
+                            )
+                        );
+                        return uploadPreparedAttachment(card.id, {
+                            name: pf.file.name,
+                            type: pf.file.type,
+                            size: pf.file.size,
+                            data: base64,
+                        });
+                    });
+
+                    // Upload files in background - don't wait
+                    Promise.all(uploadPromises).catch((err) => {
+                        console.error("Error uploading attachments:", err);
+                    });
+                }
+
                 // Replace temp card with real card
                 setBoard((prev) => {
                     if (!prev) return prev;
@@ -428,14 +464,13 @@ export default function BoardPage() {
                                 ? {
                                     ...l,
                                     cards: l.cards.map((c) =>
-                                        c.id === tempId ? { ...tempCard, ...card } as CardWithRelations : c
+                                        c.id === tempId ? { ...tempCard, ...card, attachments_count: hasFiles ? filesToUpload.length : 0 } as CardWithRelations : c
                                     ),
                                 }
                                 : l
                         ),
                     };
                 });
-                toast.success("Card created");
             } else {
                 // Remove temp card on failure
                 setBoard((prev) => {
@@ -615,10 +650,13 @@ export default function BoardPage() {
                                                         addingCard={addingCardToList === list.id}
                                                         newCardTitle={newCardTitle}
                                                         setNewCardTitle={setNewCardTitle}
-                                                        onSubmitCard={() => handleAddCard(list.id)}
+                                                        pendingFiles={pendingFiles}
+                                                        setPendingFiles={setPendingFiles}
+                                                        onSubmitCard={() => handleAddCard(list.id, pendingFiles)}
                                                         onCancelAdd={() => {
                                                             setAddingCardToList(null);
                                                             setNewCardTitle("");
+                                                            setPendingFiles([]);
                                                         }}
                                                         onCardClick={setSelectedCard}
                                                         onDeleteList={() => handleDeleteList(list.id)}
@@ -760,6 +798,8 @@ interface ListColumnProps {
     addingCard: boolean;
     newCardTitle: string;
     setNewCardTitle: (title: string) => void;
+    pendingFiles: PendingFile[];
+    setPendingFiles: (files: PendingFile[]) => void;
     onSubmitCard: () => void;
     onCancelAdd: () => void;
     onCardClick: (card: CardWithRelations) => void;
@@ -775,6 +815,8 @@ function ListColumn({
     addingCard,
     newCardTitle,
     setNewCardTitle,
+    pendingFiles,
+    setPendingFiles,
     onSubmitCard,
     onCancelAdd,
     onCardClick,
@@ -928,36 +970,14 @@ function ListColumn({
 
                             {/* Add Card Form */}
                             {addingCard && (
-                                <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-2">
-                                    <textarea
-                                        placeholder="Enter card title..."
-                                        value={newCardTitle}
-                                        onChange={(e) => setNewCardTitle(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter" && !e.shiftKey) {
-                                                e.preventDefault();
-                                                onSubmitCard();
-                                            }
-                                        }}
-                                        className="w-full px-2 py-1.5 bg-transparent text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 text-sm resize-none focus:outline-none min-h-15"
-                                        autoFocus
-                                    />
-                                    <div className="flex gap-2 mt-2">
-                                        <button
-                                            onClick={onSubmitCard}
-                                            disabled={!newCardTitle.trim()}
-                                            className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg text-sm font-medium hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            Add Card
-                                        </button>
-                                        <button
-                                            onClick={onCancelAdd}
-                                            className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
-                                        >
-                                            <X className="w-5 h-5 text-zinc-500" />
-                                        </button>
-                                    </div>
-                                </div>
+                                <AddCardForm
+                                    newCardTitle={newCardTitle}
+                                    setNewCardTitle={setNewCardTitle}
+                                    pendingFiles={pendingFiles}
+                                    setPendingFiles={setPendingFiles}
+                                    onSubmitCard={onSubmitCard}
+                                    onCancelAdd={onCancelAdd}
+                                />
                             )}
                         </div>
                     )}
@@ -1071,6 +1091,228 @@ function CardItem({ card, onClick }: { card: CardWithRelations; onClick: () => v
                     )}
                 </div>
             )}
+        </div>
+    );
+}
+
+/* =====================================================
+   Add Card Form Component with File Upload
+   ===================================================== */
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_TYPES = [
+    "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml",
+    "application/pdf", "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/plain", "text/csv", "application/json", "application/zip",
+];
+
+interface AddCardFormProps {
+    newCardTitle: string;
+    setNewCardTitle: (title: string) => void;
+    pendingFiles: PendingFile[];
+    setPendingFiles: (files: PendingFile[]) => void;
+    onSubmitCard: () => void;
+    onCancelAdd: () => void;
+}
+
+function AddCardForm({
+    newCardTitle,
+    setNewCardTitle,
+    pendingFiles,
+    setPendingFiles,
+    onSubmitCard,
+    onCancelAdd,
+}: AddCardFormProps) {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isDragging, setIsDragging] = useState(false);
+
+    const handleFileSelect = (files: FileList | null) => {
+        if (!files) return;
+
+        const validFiles: PendingFile[] = [];
+        const errors: string[] = [];
+
+        Array.from(files).forEach((file) => {
+            if (file.size > MAX_FILE_SIZE) {
+                errors.push(`${file.name} is too large (max 10MB)`);
+                return;
+            }
+            if (!ALLOWED_TYPES.includes(file.type)) {
+                errors.push(`${file.name} has unsupported file type`);
+                return;
+            }
+
+            // Create preview for images
+            let preview: string | undefined;
+            if (file.type.startsWith("image/")) {
+                preview = URL.createObjectURL(file);
+            }
+
+            validFiles.push({ file, preview });
+        });
+
+        if (errors.length > 0) {
+            toast.error(errors.join(", "));
+        }
+
+        if (validFiles.length > 0) {
+            setPendingFiles([...pendingFiles, ...validFiles]);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        handleFileSelect(e.dataTransfer.files);
+    };
+
+    const removeFile = (index: number) => {
+        const newFiles = [...pendingFiles];
+        // Revoke preview URL to prevent memory leaks
+        if (newFiles[index].preview) {
+            URL.revokeObjectURL(newFiles[index].preview!);
+        }
+        newFiles.splice(index, 1);
+        setPendingFiles(newFiles);
+    };
+
+    const formatFileSize = (bytes: number) => {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    };
+
+    const isImage = (type: string) => type.startsWith("image/");
+
+    return (
+        <div
+            className={`bg-white dark:bg-zinc-800 rounded-lg border-2 ${
+                isDragging
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                    : "border-zinc-200 dark:border-zinc-700"
+            } p-2 transition-colors`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+        >
+            <textarea
+                placeholder="Enter card title..."
+                value={newCardTitle}
+                onChange={(e) => setNewCardTitle(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        onSubmitCard();
+                    }
+                }}
+                className="w-full px-2 py-1.5 bg-transparent text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 text-sm resize-none focus:outline-none min-h-15"
+                autoFocus
+            />
+
+            {/* Pending Files Preview */}
+            {pendingFiles.length > 0 && (
+                <div className="mt-2 space-y-1.5">
+                    {pendingFiles.map((pf, index) => (
+                        <div
+                            key={index}
+                            className="flex items-center gap-2 p-1.5 bg-zinc-100 dark:bg-zinc-700 rounded-md"
+                        >
+                            {pf.preview ? (
+                                <img
+                                    src={pf.preview}
+                                    alt={pf.file.name}
+                                    className="w-8 h-8 object-cover rounded"
+                                />
+                            ) : (
+                                <div className="w-8 h-8 flex items-center justify-center bg-zinc-200 dark:bg-zinc-600 rounded">
+                                    <File className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                                </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs text-zinc-700 dark:text-zinc-300 truncate">
+                                    {pf.file.name}
+                                </p>
+                                <p className="text-xs text-zinc-400">
+                                    {formatFileSize(pf.file.size)}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => removeFile(index)}
+                                className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-600 rounded"
+                            >
+                                <X className="w-3 h-3 text-zinc-500" />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* File Drop Zone Hint */}
+            {isDragging && (
+                <div className="mt-2 p-3 border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-center">
+                    <Upload className="w-5 h-5 mx-auto text-blue-500 mb-1" />
+                    <p className="text-xs text-blue-600 dark:text-blue-400">
+                        Drop files here
+                    </p>
+                </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 mt-2">
+                <button
+                    onClick={onSubmitCard}
+                    disabled={!newCardTitle.trim()}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg text-sm font-medium hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Add Card
+                    {pendingFiles.length > 0 && (
+                        <span className="flex items-center gap-1 text-xs opacity-75">
+                            <Paperclip className="w-3 h-3" />
+                            {pendingFiles.length}
+                        </span>
+                    )}
+                </button>
+                
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    accept={ALLOWED_TYPES.join(",")}
+                    onChange={(e) => handleFileSelect(e.target.files)}
+                />
+                
+                <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                    title="Attach files"
+                >
+                    <Paperclip className="w-5 h-5 text-zinc-500" />
+                </button>
+                
+                <button
+                    onClick={onCancelAdd}
+                    className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                >
+                    <X className="w-5 h-5 text-zinc-500" />
+                </button>
+            </div>
         </div>
     );
 }

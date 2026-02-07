@@ -71,7 +71,7 @@ export default function AnalyticsPage() {
                 // Fetch cards from each board
                 const boardsWithListsPromises = allBoards.map((b) => getBoardWithLists(b.id));
                 const boardsWithLists = await Promise.all(boardsWithListsPromises);
-                
+
                 const cards: CardWithRelations[] = [];
                 boardsWithLists.forEach((board) => {
                     if (board?.lists) {
@@ -98,7 +98,7 @@ export default function AnalyticsPage() {
     // Compute analytics data
     const analyticsData = useMemo<AnalyticsData>(() => {
         const now = new Date();
-        
+
         // Card status
         const completedCards = allCards.filter((c) => c.is_complete).length;
         const overdueCards = allCards.filter(
@@ -130,7 +130,7 @@ export default function AnalyticsPage() {
             const date = new Date();
             date.setDate(date.getDate() - i);
             const dateStr = date.toISOString().split("T")[0];
-            const count = activities.filter((a) => 
+            const count = activities.filter((a) =>
                 a.created_at.split("T")[0] === dateStr
             ).length;
             activityByDay.push({
@@ -155,8 +155,8 @@ export default function AnalyticsPage() {
             const monthStr = `${months[date.getMonth()]}`;
             const count = boards.filter((b) => {
                 const boardDate = new Date(b.created_at);
-                return boardDate.getMonth() === date.getMonth() && 
-                       boardDate.getFullYear() === date.getFullYear();
+                return boardDate.getMonth() === date.getMonth() &&
+                    boardDate.getFullYear() === date.getFullYear();
             }).length;
             boardsCreatedByMonth.push({ month: monthStr, count });
         }
@@ -175,8 +175,8 @@ export default function AnalyticsPage() {
     }, [workspaces, boards, allCards, activities]);
 
     // Calculate completion rate
-    const completionRate = analyticsData.totalCards > 0 
-        ? Math.round((analyticsData.completedCards / analyticsData.totalCards) * 100) 
+    const completionRate = analyticsData.totalCards > 0
+        ? Math.round((analyticsData.completedCards / analyticsData.totalCards) * 100)
         : 0;
 
     if (loading || loadingWorkspaces) {
@@ -194,28 +194,28 @@ export default function AnalyticsPage() {
             label: "Total Workspaces",
             value: analyticsData.totalWorkspaces,
             icon: LayoutGrid,
-            color: "from-blue-500 to-blue-600",
+            color: "",
             change: null,
         },
         {
             label: "Total Boards",
             value: analyticsData.totalBoards,
             icon: FolderKanban,
-            color: "from-purple-500 to-purple-600",
+            color: "",
             change: null,
         },
         {
             label: "Total Cards",
             value: analyticsData.totalCards,
             icon: TrendingUp,
-            color: "from-emerald-500 to-emerald-600",
+            color: "",
             change: null,
         },
         {
             label: "Completion Rate",
             value: `${completionRate}%`,
             icon: CheckCircle2,
-            color: "from-orange-500 to-orange-600",
+            color: "",
             change: completionRate >= 50 ? "positive" : "negative",
         },
     ];
@@ -255,9 +255,8 @@ export default function AnalyticsPage() {
                                         {stat.value}
                                     </p>
                                     {stat.change && (
-                                        <div className={`flex items-center gap-1 mt-1 text-xs ${
-                                            stat.change === "positive" ? "text-emerald-500" : "text-red-500"
-                                        }`}>
+                                        <div className={`flex items-center gap-1 mt-1 text-xs ${stat.change === "positive" ? "text-emerald-500" : "text-red-500"
+                                            }`}>
                                             {stat.change === "positive" ? (
                                                 <ArrowUpRight className="w-3 h-3" />
                                             ) : (
@@ -267,9 +266,7 @@ export default function AnalyticsPage() {
                                         </div>
                                     )}
                                 </div>
-                                <div className={`p-2 rounded-lg bg-gradient-to-br ${stat.color}`}>
-                                    <stat.icon className="w-5 h-5 text-white" />
-                                </div>
+                                <stat.icon className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
                             </div>
                         </div>
                     ))}
@@ -289,36 +286,36 @@ export default function AnalyticsPage() {
                                     <AreaChart data={analyticsData.activityByDay}>
                                         <defs>
                                             <linearGradient id="colorActivity" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                                        <XAxis 
-                                            dataKey="date" 
+                                        <XAxis
+                                            dataKey="date"
                                             stroke="#71717a"
                                             fontSize={12}
                                         />
-                                        <YAxis 
+                                        <YAxis
                                             stroke="#71717a"
                                             fontSize={12}
                                             allowDecimals={false}
                                         />
-                                        <Tooltip 
-                                            contentStyle={{ 
-                                                backgroundColor: "#18181b", 
+                                        <Tooltip
+                                            contentStyle={{
+                                                backgroundColor: "#18181b",
                                                 border: "1px solid #27272a",
                                                 borderRadius: "8px",
                                                 color: "#fff"
                                             }}
                                         />
-                                        <Area 
-                                            type="monotone" 
-                                            dataKey="count" 
-                                            stroke="#6366f1" 
+                                        <Area
+                                            type="monotone"
+                                            dataKey="count"
+                                            stroke="#6366f1"
                                             strokeWidth={2}
-                                            fillOpacity={1} 
-                                            fill="url(#colorActivity)" 
+                                            fillOpacity={1}
+                                            fill="url(#colorActivity)"
                                             name="Activities"
                                         />
                                     </AreaChart>
@@ -354,16 +351,16 @@ export default function AnalyticsPage() {
                                                 <Cell key={`cell-${index}`} fill={entry.color} />
                                             ))}
                                         </Pie>
-                                        <Tooltip 
-                                            contentStyle={{ 
-                                                backgroundColor: "#18181b", 
+                                        <Tooltip
+                                            contentStyle={{
+                                                backgroundColor: "#18181b",
                                                 border: "1px solid #27272a",
                                                 borderRadius: "8px",
                                                 color: "#fff"
                                             }}
                                         />
-                                        <Legend 
-                                            verticalAlign="bottom" 
+                                        <Legend
+                                            verticalAlign="bottom"
                                             height={36}
                                             formatter={(value) => <span className="text-zinc-400 text-sm">{value}</span>}
                                         />
@@ -390,27 +387,27 @@ export default function AnalyticsPage() {
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={analyticsData.boardsCreatedByMonth}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                                    <XAxis 
-                                        dataKey="month" 
+                                    <XAxis
+                                        dataKey="month"
                                         stroke="#71717a"
                                         fontSize={12}
                                     />
-                                    <YAxis 
+                                    <YAxis
                                         stroke="#71717a"
                                         fontSize={12}
                                         allowDecimals={false}
                                     />
-                                    <Tooltip 
-                                        contentStyle={{ 
-                                            backgroundColor: "#18181b", 
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: "#18181b",
                                             border: "1px solid #27272a",
                                             borderRadius: "8px",
                                             color: "#fff"
                                         }}
                                     />
-                                    <Bar 
-                                        dataKey="count" 
-                                        fill="#8b5cf6" 
+                                    <Bar
+                                        dataKey="count"
+                                        fill="#8b5cf6"
                                         radius={[4, 4, 0, 0]}
                                         name="Boards"
                                     />
