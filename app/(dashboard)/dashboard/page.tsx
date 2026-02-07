@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, Suspense, useCallback, useMemo, useTransition, useRef } from "react";
+import React, { useEffect, useState, Suspense, useCallback, useMemo, useRef } from "react";
 import {
     FolderKanban,
     Plus,
@@ -8,15 +8,19 @@ import {
     LayoutGrid,
     Loader2,
     X,
+    MoreHorizontal,
+    Trash2,
+    Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { syncCurrentUser, createWorkspace, createBoard, uploadBoardBackground } from "@/lib/actions";
+import { syncCurrentUser, createWorkspace, createBoard, uploadBoardBackground, deleteWorkspace } from "@/lib/actions";
 import { useWorkspaces } from "@/lib/context/WorkspaceContext";
 import { useBoardsQuery, useDashboardStatsQuery } from "@/lib/hooks";
 import { workspaceNameSchema, boardNameSchema, boardColorSchema } from "@/lib/validations";
 import { DashboardPageSkeleton } from "@/components/ui/Skeleton";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Board, Workspace } from "@/lib/types/database";
 
 // Component to handle search params
@@ -56,7 +60,7 @@ function SearchParamsHandler({
 }
 
 export default function DashboardPage() {
-    const { workspaces, loading: loadingWorkspaces, addWorkspace } = useWorkspaces();
+    const { workspaces, loading: loadingWorkspaces, addWorkspace, removeWorkspace } = useWorkspaces();
     const firstWorkspaceId = workspaces[0]?.id;
     
     // Use React Query for boards - cached and optimized
@@ -74,8 +78,15 @@ export default function DashboardPage() {
     const [newBoardColor, setNewBoardColor] = useState("#3b82f6");
     const [newBoardImage, setNewBoardImage] = useState<string | null>(null);
     const [uploadingImage, setUploadingImage] = useState(false);
-    const [isPending, startTransition] = useTransition();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // Delete workspace state
+    const [deleteWorkspaceConfirm, setDeleteWorkspaceConfirm] = useState<{
+        isOpen: boolean;
+        workspaceId: string | null;
+        workspaceName: string;
+    }>({ isOpen: false, workspaceId: null, workspaceName: "" });
+    const [deletingWorkspace, setDeletingWorkspace] = useState(false);
     
     // Sync user on mount (fire and forget)
     const hasSyncedRef = useRef(false);
@@ -106,30 +117,14 @@ export default function DashboardPage() {
         }
 
         setCreating(true);
-        
-        // Optimistic update - create temp workspace immediately
-        const tempId = `temp-${Date.now()}`;
-        const tempWorkspace: Workspace = {
-            id: tempId,
-            name: validation.data,
-            description: null,
-            owner_id: "",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-        };
-        
-        // Immediately add to UI
-        addWorkspace(tempWorkspace);
-        setNewWorkspaceName("");
-        setShowCreateWorkspaceModal(false);
 
         try {
             const result = await createWorkspace({ name: validation.data });
             if (result.workspace) {
-                // Replace temp with real workspace using transition for smooth update
-                startTransition(() => {
-                    // Context will be updated by the action
-                });
+                // Add to UI only after successful creation
+                addWorkspace(result.workspace);
+                setNewWorkspaceName("");
+                setShowCreateWorkspaceModal(false);
                 toast.success("Workspace created successfully");
             } else {
                 toast.error(result.error || "Failed to create workspace");
@@ -138,6 +133,30 @@ export default function DashboardPage() {
             toast.error("Failed to create workspace. Please try again.");
         } finally {
             setCreating(false);
+        }
+    };
+
+    const handleDeleteWorkspace = useCallback((workspaceId: string, workspaceName: string) => {
+        setDeleteWorkspaceConfirm({ isOpen: true, workspaceId, workspaceName });
+    }, []);
+
+    const confirmDeleteWorkspace = async () => {
+        if (!deleteWorkspaceConfirm.workspaceId) return;
+        
+        setDeletingWorkspace(true);
+        try {
+            const success = await deleteWorkspace(deleteWorkspaceConfirm.workspaceId);
+            if (success) {
+                removeWorkspace(deleteWorkspaceConfirm.workspaceId);
+                toast.success("Workspace deleted successfully");
+            } else {
+                toast.error("Failed to delete workspace");
+            }
+        } catch {
+            toast.error("Failed to delete workspace");
+        } finally {
+            setDeletingWorkspace(false);
+            setDeleteWorkspaceConfirm({ isOpen: false, workspaceId: null, workspaceName: "" });
         }
     };
 
@@ -205,22 +224,20 @@ export default function DashboardPage() {
         }
 
         setCreating(true);
-        
-        // Close modal immediately for faster feel
-        setShowCreateBoardModal(false);
-        const boardName = nameValidation.data;
-        setNewBoardName("");
-        setNewBoardColor("#3b82f6");
-        setNewBoardImage(null);
 
         try {
             const result = await createBoard({
                 workspace_id: selectedWorkspaceId,
-                name: boardName,
+                name: nameValidation.data,
                 background_color: newBoardColor,
                 background_image: newBoardImage || undefined,
             });
             if (result.board) {
+                // Close modal and reset state only after successful creation
+                setShowCreateBoardModal(false);
+                setNewBoardName("");
+                setNewBoardColor("#3b82f6");
+                setNewBoardImage(null);
                 toast.success("Board created successfully");
                 router.push(`/dashboard/board/${result.board.id}`);
             } else {
@@ -308,7 +325,7 @@ export default function DashboardPage() {
                             </h2>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                 {workspaces.map((workspace) => (
-                                    <WorkspaceCard key={workspace.id} workspace={workspace} />
+                                    <WorkspaceCard key={workspace.id} workspace={workspace} onDelete={handleDeleteWorkspace} />
                                 ))}
 
                                 {/* Add Workspace Card */}
@@ -522,36 +539,105 @@ export default function DashboardPage() {
                     </div>
                 </div>
             )}
+
+            {/* Delete Workspace Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={deleteWorkspaceConfirm.isOpen}
+                onClose={() => setDeleteWorkspaceConfirm({ isOpen: false, workspaceId: null, workspaceName: "" })}
+                onConfirm={confirmDeleteWorkspace}
+                title="Delete Workspace"
+                message={`Are you sure you want to delete "${deleteWorkspaceConfirm.workspaceName}"? This will delete all boards and cards in this workspace. This action cannot be undone.`}
+                confirmText="Delete Workspace"
+                variant="danger"
+                icon="trash"
+                isLoading={deletingWorkspace}
+            />
         </div>
     );
 }
 
 /* Workspace Card Component - Memoized */
-const WorkspaceCard = React.memo(function WorkspaceCard({ workspace }: { workspace: Workspace }) {
+const WorkspaceCard = React.memo(function WorkspaceCard({ 
+    workspace, 
+    onDelete 
+}: { 
+    workspace: Workspace;
+    onDelete: (id: string, name: string) => void;
+}) {
+    const [showMenu, setShowMenu] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setShowMenu(false);
+            }
+        }
+        if (showMenu) {
+            document.addEventListener("mousedown", handleClickOutside);
+            return () => document.removeEventListener("mousedown", handleClickOutside);
+        }
+    }, [showMenu]);
+
     return (
-        <Link
-            href={`/dashboard/workspace/${workspace.id}`}
-            className="group flex flex-col p-5 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-lg dark:hover:shadow-zinc-900/50 transition-all"
-        >
-            <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-lg bg-linear-to-br from-zinc-700 to-zinc-900 dark:from-zinc-600 dark:to-zinc-800 flex items-center justify-center">
-                    <LayoutGrid className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 truncate group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors">
-                        {workspace.name}
-                    </h3>
-                </div>
+        <div className="group relative flex flex-col p-5 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-lg dark:hover:shadow-zinc-900/50 transition-all">
+            {/* 3-dot Menu Button */}
+            <div className="absolute top-3 right-3 z-10" ref={menuRef}>
+                <button
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowMenu(!showMenu);
+                    }}
+                    className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                >
+                    <MoreHorizontal className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                </button>
+                
+                {/* Dropdown Menu */}
+                {showMenu && (
+                    <div className="absolute top-full right-0 mt-1 w-40 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg overflow-hidden">
+                        <button
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setShowMenu(false);
+                                onDelete(workspace.id, workspace.name);
+                            }}
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Delete workspace
+                        </button>
+                    </div>
+                )}
             </div>
-            {workspace.description && (
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2">
-                    {workspace.description}
-                </p>
-            )}
-            <div className="mt-auto pt-3 flex items-center text-xs text-zinc-400 dark:text-zinc-500">
-                <span>Created {new Date(workspace.created_at).toLocaleDateString()}</span>
-            </div>
-        </Link>
+
+            <Link
+                href={`/dashboard/workspace/${workspace.id}`}
+                className="flex flex-col flex-1"
+            >
+                <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-linear-to-br from-zinc-700 to-zinc-900 dark:from-zinc-600 dark:to-zinc-800 flex items-center justify-center">
+                        <LayoutGrid className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 truncate group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors">
+                            {workspace.name}
+                        </h3>
+                    </div>
+                </div>
+                {workspace.description && (
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2">
+                        {workspace.description}
+                    </p>
+                )}
+                <div className="mt-auto pt-3 flex items-center text-xs text-zinc-400 dark:text-zinc-500">
+                    <span>Created {new Date(workspace.created_at).toLocaleDateString()}</span>
+                </div>
+            </Link>
+        </div>
     );
 });
 

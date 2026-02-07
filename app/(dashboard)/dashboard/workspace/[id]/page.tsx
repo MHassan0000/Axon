@@ -13,12 +13,14 @@ import {
     Settings,
     Image as ImageIcon,
     X,
+    Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getWorkspaceWithBoards, createBoard, uploadBoardBackground } from "@/lib/actions";
+import { getWorkspaceWithBoards, createBoard, uploadBoardBackground, deleteBoard } from "@/lib/actions";
 import { boardNameSchema, boardColorSchema } from "@/lib/validations";
 import { WorkspaceSettingsModal } from "@/components/dashboard-components/WorkspaceSettingsModal";
 import { WorkspacePageSkeleton } from "@/components/ui/Skeleton";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { WorkspaceWithBoards, Board } from "@/lib/types/database";
 
 export default function WorkspacePage() {
@@ -35,6 +37,14 @@ export default function WorkspacePage() {
     const [uploadingImage, setUploadingImage] = useState(false);
     const [creating, setCreating] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Delete board state
+    const [deleteBoardConfirm, setDeleteBoardConfirm] = useState<{
+        isOpen: boolean;
+        boardId: string | null;
+        boardName: string;
+    }>({ isOpen: false, boardId: null, boardName: "" });
+    const [deletingBoard, setDeletingBoard] = useState(false);
 
     const boardColors = useMemo(() => [
         "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
@@ -138,7 +148,34 @@ export default function WorkspacePage() {
         } finally {
             setCreating(false);
         }
-    }, [newBoardName, newBoardColor, newBoardImage, workspace, workspaceId]);
+}, [newBoardName, newBoardColor, newBoardImage, workspace, workspaceId]);
+
+    const handleDeleteBoard = useCallback((boardId: string, boardName: string) => {
+        setDeleteBoardConfirm({ isOpen: true, boardId, boardName });
+    }, []);
+
+    const confirmDeleteBoard = useCallback(async () => {
+        if (!deleteBoardConfirm.boardId || !workspace) return;
+        
+        setDeletingBoard(true);
+        try {
+            const success = await deleteBoard(deleteBoardConfirm.boardId);
+            if (success) {
+                setWorkspace({
+                    ...workspace,
+                    boards: workspace.boards.filter(b => b.id !== deleteBoardConfirm.boardId)
+                });
+                toast.success("Board deleted successfully");
+            } else {
+                toast.error("Failed to delete board");
+            }
+        } catch {
+            toast.error("Failed to delete board");
+        } finally {
+            setDeletingBoard(false);
+            setDeleteBoardConfirm({ isOpen: false, boardId: null, boardName: "" });
+        }
+    }, [deleteBoardConfirm.boardId, workspace]);
 
     if (loading) {
         return <WorkspacePageSkeleton />;
@@ -235,8 +272,8 @@ export default function WorkspacePage() {
                 ) : (
                     /* Boards Grid */
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {workspace.boards.map((board) => (
-                            <BoardCard key={board.id} board={board} />
+{workspace.boards.map((board) => (
+                            <BoardCard key={board.id} board={board} onDelete={handleDeleteBoard} />
                         ))}
 
                         {/* Add Board Card */}
@@ -372,7 +409,7 @@ export default function WorkspacePage() {
                 </div>
             )}
 
-            {/* Workspace Settings Modal */}
+{/* Workspace Settings Modal */}
             {showSettingsModal && (
                 <WorkspaceSettingsModal
                     workspace={workspace}
@@ -383,12 +420,47 @@ export default function WorkspacePage() {
                     }}
                 />
             )}
+
+            {/* Delete Board Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={deleteBoardConfirm.isOpen}
+                onClose={() => setDeleteBoardConfirm({ isOpen: false, boardId: null, boardName: "" })}
+                onConfirm={confirmDeleteBoard}
+                title="Delete Board"
+                message={`Are you sure you want to delete "${deleteBoardConfirm.boardName}"? This will delete all lists and cards in this board. This action cannot be undone.`}
+                confirmText="Delete Board"
+                variant="danger"
+                icon="trash"
+                isLoading={deletingBoard}
+            />
         </div>
     );
 }
 
 /* Board Card Component - Memoized for performance */
-const BoardCard = React.memo(function BoardCard({ board }: { board: Board }) {
+const BoardCard = React.memo(function BoardCard({ 
+    board,
+    onDelete
+}: { 
+    board: Board;
+    onDelete: (id: string, name: string) => void;
+}) {
+    const [showMenu, setShowMenu] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setShowMenu(false);
+            }
+        }
+        if (showMenu) {
+            document.addEventListener("mousedown", handleClickOutside);
+            return () => document.removeEventListener("mousedown", handleClickOutside);
+        }
+    }, [showMenu]);
+
     const backgroundStyle = board.background_image
         ? {
             backgroundImage: `url(${board.background_image})`,
@@ -398,30 +470,57 @@ const BoardCard = React.memo(function BoardCard({ board }: { board: Board }) {
         : { backgroundColor: board.background_color || "#1f1f23" };
 
     return (
-        <Link
-            href={`/dashboard/board/${board.id}`}
-            className="group relative overflow-hidden p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-lg transition-all min-h-30"
+        <div 
+            className="group relative overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-lg transition-all min-h-30"
             style={backgroundStyle}
         >
             <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
-            <div className="relative z-10 flex flex-col h-full">
-                <div className="flex items-start justify-between">
-                    <h3 className="font-semibold text-white group-hover:scale-[1.02] transition-transform origin-left">
-                        {board.name}
-                    </h3>
-                    <button
-                        onClick={(e) => { e.preventDefault(); }}
-                        className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-white/20 transition-all"
-                    >
-                        <MoreHorizontal className="w-4 h-4 text-white" />
-                    </button>
-                </div>
+            
+            {/* 3-dot Menu Button */}
+            <div className="absolute top-2 right-2 z-20" ref={menuRef}>
+                <button
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowMenu(!showMenu);
+                    }}
+                    className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-white/20 transition-all"
+                >
+                    <MoreHorizontal className="w-4 h-4 text-white" />
+                </button>
+                
+                {/* Dropdown Menu */}
+                {showMenu && (
+                    <div className="absolute top-full right-0 mt-1 w-36 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg overflow-hidden">
+                        <button
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setShowMenu(false);
+                                onDelete(board.id, board.name);
+                            }}
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Delete board
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            <Link
+                href={`/dashboard/board/${board.id}`}
+                className="relative z-10 flex flex-col h-full p-5"
+            >
+                <h3 className="font-semibold text-white group-hover:scale-[1.02] transition-transform origin-left">
+                    {board.name}
+                </h3>
                 {board.description && (
                     <p className="text-sm text-white/70 mt-1 line-clamp-2">
                         {board.description}
                     </p>
                 )}
-            </div>
-        </Link>
+            </Link>
+        </div>
     );
 });
