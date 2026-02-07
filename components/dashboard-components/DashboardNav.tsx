@@ -75,7 +75,7 @@ export default function DashboardNav() {
                     <Link href="/">
                         <div className="flex items-center gap-2.5">
                             <Image
-                                src="/images/Axonlogo.png"
+                                src="/images/axonlogo-v2.png"
                                 alt="Axon"
                                 width={35}
                                 height={35}

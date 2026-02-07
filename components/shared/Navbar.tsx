@@ -34,7 +34,7 @@ export default function Navbar() {
             {/* Left: Logo + Axon */}
             <Link href="/" className="flex items-center gap-1 hover:opacity-80 transition-opacity">
               <Image
-                src="/images/Axonlogo.png"
+                src="/images/axonlogo-v2.png"
                 alt="Axon Logo"
                 width={50}
                 height={50}
