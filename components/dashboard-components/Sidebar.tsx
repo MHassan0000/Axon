@@ -157,13 +157,7 @@ export default function Sidebar() {
                                 <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-400 uppercase tracking-wider">
                                     Workspaces
                                 </span>
-                                <Link
-                                    href="/dashboard"
-                                    className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded transition-colors"
-                                    title="Add workspace"
-                                >
-                                    <Plus className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400" />
-                                </Link>
+
                             </div>
 
                             {loadingWorkspaces ? (

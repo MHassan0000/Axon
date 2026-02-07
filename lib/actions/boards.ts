@@ -4,6 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "./users";
 import { verifyWorkspaceAccess, verifyBoardAccess } from "./helpers";
 import { canCreateBoard } from "@/lib/billing";
+import { 
+  validateInput, 
+  createBoardSchema, 
+  updateBoardSchema,
+  createLabelSchema 
+} from "@/lib/validations";
+import { z } from "zod";
 import type { 
   Board, 
   BoardWithLists,
@@ -16,6 +23,13 @@ import type {
  * Create a new board
  */
 export async function createBoard(input: CreateBoardInput): Promise<{ board: Board | null; error?: string }> {
+  // Validate input
+  const validation = validateInput(createBoardSchema, input);
+  if (!validation.success) {
+    return { board: null, error: validation.error };
+  }
+  const validData = validation.data;
+
   const user = await getCurrentUser();
   
   if (!user) {
@@ -28,7 +42,7 @@ export async function createBoard(input: CreateBoardInput): Promise<{ board: Boa
   const { data: membership } = await supabase
     .from("workspace_members")
     .select("*")
-    .eq("workspace_id", input.workspace_id)
+    .eq("workspace_id", validData.workspace_id)
     .eq("user_id", user.id)
     .single();
 
@@ -40,7 +54,7 @@ export async function createBoard(input: CreateBoardInput): Promise<{ board: Boa
   const { count: boardCount } = await supabase
     .from("boards")
     .select("*", { count: "exact", head: true })
-    .eq("workspace_id", input.workspace_id);
+    .eq("workspace_id", validData.workspace_id);
 
   const canCreate = await canCreateBoard(boardCount || 0);
   if (!canCreate.allowed) {
@@ -51,7 +65,7 @@ export async function createBoard(input: CreateBoardInput): Promise<{ board: Boa
   const { data: lastBoard } = await supabase
     .from("boards")
     .select("position")
-    .eq("workspace_id", input.workspace_id)
+    .eq("workspace_id", validData.workspace_id)
     .order("position", { ascending: false })
     .limit(1)
     .single();
@@ -61,11 +75,11 @@ export async function createBoard(input: CreateBoardInput): Promise<{ board: Boa
   const { data: board, error } = await supabase
     .from("boards")
     .insert({
-      workspace_id: input.workspace_id,
-      name: input.name,
-      description: input.description || null,
-      is_private: input.is_private || false,
-      background_color: input.background_color || "#1f1f23",
+      workspace_id: validData.workspace_id,
+      name: validData.name,
+      description: validData.description || null,
+      is_private: false,
+      background_color: validData.background_color || "#1f1f23",
       position,
     })
     .select()
@@ -273,6 +287,21 @@ export async function updateBoard(
   boardId: string,
   input: UpdateBoardInput
 ): Promise<Board | null> {
+  // Validate boardId
+  const idValidation = z.string().uuid("Invalid board ID").safeParse(boardId);
+  if (!idValidation.success) {
+    console.error("Invalid board ID");
+    return null;
+  }
+
+  // Validate input
+  const validation = validateInput(updateBoardSchema, input);
+  if (!validation.success) {
+    console.error("Validation failed:", validation.error);
+    return null;
+  }
+  const validData = validation.data;
+
   const user = await getCurrentUser();
   
   if (!user) {
@@ -290,7 +319,7 @@ export async function updateBoard(
 
   const { data: board, error } = await supabase
     .from("boards")
-    .update(input)
+    .update(validData)
     .eq("id", boardId)
     .select()
     .single();
@@ -343,6 +372,13 @@ export async function createLabel(
   name: string,
   color: string
 ): Promise<Label | null> {
+  // Validate input
+  const validation = validateInput(createLabelSchema, { board_id: boardId, name, color });
+  if (!validation.success) {
+    console.error("Validation failed:", validation.error);
+    return null;
+  }
+
   // Verify user has access to this board
   const access = await verifyBoardAccess(boardId);
   if (!access.allowed) {

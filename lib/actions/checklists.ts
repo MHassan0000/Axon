@@ -3,6 +3,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "./users";
 import { verifyCardAccess, verifyChecklistAccess, verifyChecklistItemAccess } from "./helpers";
+import { 
+  checklistTitleSchema, 
+  checklistItemTitleSchema 
+} from "@/lib/validations";
+import { z } from "zod";
 import type { 
   Checklist, 
   ChecklistItem, 
@@ -16,6 +21,21 @@ export async function createChecklist(
   cardId: string,
   title: string = "Checklist"
 ): Promise<Checklist | null> {
+  // Validate card ID
+  const cardIdValidation = z.string().uuid("Invalid card ID").safeParse(cardId);
+  if (!cardIdValidation.success) {
+    console.error("Invalid card ID");
+    return null;
+  }
+
+  // Validate title
+  const titleValidation = checklistTitleSchema.safeParse(title);
+  if (!titleValidation.success) {
+    console.error("Validation failed:", titleValidation.error.issues[0]?.message);
+    return null;
+  }
+  const validTitle = titleValidation.data;
+
   const user = await getCurrentUser();
   
   if (!user) {
@@ -44,7 +64,7 @@ export async function createChecklist(
 
   const { data, error } = await supabase
     .from("checklists")
-    .insert({ card_id: cardId, title, position })
+    .insert({ card_id: cardId, title: validTitle, position })
     .select()
     .single();
 
@@ -60,6 +80,13 @@ export async function createChecklist(
  * Get checklists for a card
  */
 export async function getChecklists(cardId: string): Promise<ChecklistWithItems[]> {
+  // Validate card ID
+  const cardIdValidation = z.string().uuid("Invalid card ID").safeParse(cardId);
+  if (!cardIdValidation.success) {
+    console.error("Invalid card ID");
+    return [];
+  }
+
   // Verify user has access to this card
   const access = await verifyCardAccess(cardId);
   if (!access.allowed) {
@@ -103,6 +130,13 @@ export async function getChecklists(cardId: string): Promise<ChecklistWithItems[
  * Delete a checklist
  */
 export async function deleteChecklist(checklistId: string): Promise<boolean> {
+  // Validate ID
+  const idValidation = z.string().uuid("Invalid checklist ID").safeParse(checklistId);
+  if (!idValidation.success) {
+    console.error("Invalid checklist ID");
+    return false;
+  }
+
   // Verify user has access to this checklist
   const access = await verifyChecklistAccess(checklistId);
   if (!access.allowed) {
@@ -132,6 +166,21 @@ export async function updateChecklist(
   checklistId: string,
   title: string
 ): Promise<boolean> {
+  // Validate ID
+  const idValidation = z.string().uuid("Invalid checklist ID").safeParse(checklistId);
+  if (!idValidation.success) {
+    console.error("Invalid checklist ID");
+    return false;
+  }
+
+  // Validate title
+  const titleValidation = checklistTitleSchema.safeParse(title);
+  if (!titleValidation.success) {
+    console.error("Validation failed:", titleValidation.error.issues[0]?.message);
+    return false;
+  }
+  const validTitle = titleValidation.data;
+
   // Verify user has access to this checklist
   const access = await verifyChecklistAccess(checklistId);
   if (!access.allowed) {
@@ -143,7 +192,7 @@ export async function updateChecklist(
 
   const { error } = await supabase
     .from("checklists")
-    .update({ title })
+    .update({ title: validTitle })
     .eq("id", checklistId);
 
   if (error) {
@@ -161,6 +210,21 @@ export async function addChecklistItem(
   checklistId: string,
   title: string
 ): Promise<ChecklistItem | null> {
+  // Validate checklist ID
+  const idValidation = z.string().uuid("Invalid checklist ID").safeParse(checklistId);
+  if (!idValidation.success) {
+    console.error("Invalid checklist ID");
+    return null;
+  }
+
+  // Validate title
+  const titleValidation = checklistItemTitleSchema.safeParse(title);
+  if (!titleValidation.success) {
+    console.error("Validation failed:", titleValidation.error.issues[0]?.message);
+    return null;
+  }
+  const validTitle = titleValidation.data;
+
   // Verify user has access to this checklist
   const access = await verifyChecklistAccess(checklistId);
   if (!access.allowed) {
@@ -182,7 +246,7 @@ export async function addChecklistItem(
 
   const { data, error } = await supabase
     .from("checklist_items")
-    .insert({ checklist_id: checklistId, title, position })
+    .insert({ checklist_id: checklistId, title: validTitle, position })
     .select()
     .single();
 
@@ -201,6 +265,20 @@ export async function toggleChecklistItem(
   itemId: string,
   isComplete: boolean
 ): Promise<boolean> {
+  // Validate item ID
+  const idValidation = z.string().uuid("Invalid item ID").safeParse(itemId);
+  if (!idValidation.success) {
+    console.error("Invalid checklist item ID");
+    return false;
+  }
+
+  // Validate isComplete
+  const boolValidation = z.boolean().safeParse(isComplete);
+  if (!boolValidation.success) {
+    console.error("Invalid isComplete value");
+    return false;
+  }
+
   // Verify user has access to this checklist item
   const access = await verifyChecklistItemAccess(itemId);
   if (!access.allowed) {
@@ -227,6 +305,13 @@ export async function toggleChecklistItem(
  * Delete checklist item
  */
 export async function deleteChecklistItem(itemId: string): Promise<boolean> {
+  // Validate item ID
+  const idValidation = z.string().uuid("Invalid item ID").safeParse(itemId);
+  if (!idValidation.success) {
+    console.error("Invalid checklist item ID");
+    return false;
+  }
+
   // Verify user has access to this checklist item
   const access = await verifyChecklistItemAccess(itemId);
   if (!access.allowed) {
@@ -256,6 +341,21 @@ export async function updateChecklistItem(
   itemId: string,
   title: string
 ): Promise<boolean> {
+  // Validate item ID
+  const idValidation = z.string().uuid("Invalid item ID").safeParse(itemId);
+  if (!idValidation.success) {
+    console.error("Invalid checklist item ID");
+    return false;
+  }
+
+  // Validate title
+  const titleValidation = checklistItemTitleSchema.safeParse(title);
+  if (!titleValidation.success) {
+    console.error("Validation failed:", titleValidation.error.issues[0]?.message);
+    return false;
+  }
+  const validTitle = titleValidation.data;
+
   // Verify user has access to this checklist item
   const access = await verifyChecklistItemAccess(itemId);
   if (!access.allowed) {
@@ -267,7 +367,7 @@ export async function updateChecklistItem(
 
   const { error } = await supabase
     .from("checklist_items")
-    .update({ title })
+    .update({ title: validTitle })
     .eq("id", itemId);
 
   if (error) {

@@ -3,6 +3,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "./users";
 import { canCreateWorkspace } from "@/lib/billing";
+import { 
+  validateInput, 
+  createWorkspaceSchema, 
+  updateWorkspaceSchema 
+} from "@/lib/validations";
+import { z } from "zod";
 import type { 
   Workspace, 
   WorkspaceMember, 
@@ -11,12 +17,26 @@ import type {
   UpdateWorkspaceInput 
 } from "@/lib/types/database";
 
+// Validation schema for adding workspace member
+const addWorkspaceMemberSchema = z.object({
+  workspaceId: z.string().uuid("Invalid workspace ID"),
+  userId: z.string().uuid("Invalid user ID"),
+  role: z.enum(["admin", "member"]).optional().default("member"),
+});
+
 /**
  * Create a new workspace
  */
 export async function createWorkspace(
   input: CreateWorkspaceInput
 ): Promise<{ workspace: Workspace | null; error?: string }> {
+  // Validate input
+  const validation = validateInput(createWorkspaceSchema, input);
+  if (!validation.success) {
+    return { workspace: null, error: validation.error };
+  }
+  const validData = validation.data;
+
   const user = await getCurrentUser();
   
   if (!user) {
@@ -40,8 +60,8 @@ export async function createWorkspace(
   const { data: workspace, error: workspaceError } = await supabase
     .from("workspaces")
     .insert({
-      name: input.name,
-      description: input.description || null,
+      name: validData.name,
+      description: validData.description || null,
       owner_id: user.id,
     })
     .select()
@@ -159,6 +179,21 @@ export async function updateWorkspace(
   workspaceId: string,
   input: UpdateWorkspaceInput
 ): Promise<Workspace | null> {
+  // Validate workspaceId
+  const idValidation = z.string().uuid("Invalid workspace ID").safeParse(workspaceId);
+  if (!idValidation.success) {
+    console.error("Invalid workspace ID");
+    return null;
+  }
+
+  // Validate input
+  const validation = validateInput(updateWorkspaceSchema, input);
+  if (!validation.success) {
+    console.error("Validation failed:", validation.error);
+    return null;
+  }
+  const validData = validation.data;
+
   const user = await getCurrentUser();
   
   if (!user) {
@@ -182,7 +217,7 @@ export async function updateWorkspace(
 
   const { data: workspace, error } = await supabase
     .from("workspaces")
-    .update(input)
+    .update(validData)
     .eq("id", workspaceId)
     .select()
     .single();
@@ -240,6 +275,13 @@ export async function addWorkspaceMember(
   userId: string,
   role: "admin" | "member" = "member"
 ): Promise<WorkspaceMember | null> {
+  // Validate input
+  const validation = addWorkspaceMemberSchema.safeParse({ workspaceId, userId, role });
+  if (!validation.success) {
+    console.error("Validation failed:", validation.error.issues[0]?.message);
+    return null;
+  }
+
   const user = await getCurrentUser();
   
   if (!user) {

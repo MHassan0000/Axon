@@ -3,6 +3,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "./users";
 import { verifyListAccess, verifyCardAccess } from "./helpers";
+import { 
+  validateInput, 
+  createCardSchema, 
+  updateCardSchema,
+  createCommentSchema 
+} from "@/lib/validations";
+import { z } from "zod";
 import type { 
   Card, 
   CardWithRelations,
@@ -16,6 +23,14 @@ import type {
  * Create a new card
  */
 export async function createCard(input: CreateCardInput): Promise<Card | null> {
+  // Validate input
+  const validation = validateInput(createCardSchema, input);
+  if (!validation.success) {
+    console.error("Validation failed:", validation.error);
+    return null;
+  }
+  const validData = validation.data;
+
   const user = await getCurrentUser();
   
   if (!user) {
@@ -24,7 +39,7 @@ export async function createCard(input: CreateCardInput): Promise<Card | null> {
   }
 
   // Verify user has access to the list's workspace
-  const access = await verifyListAccess(input.list_id);
+  const access = await verifyListAccess(validData.list_id);
   if (!access.allowed) {
     console.error("User does not have access to this list");
     return null;
@@ -36,7 +51,7 @@ export async function createCard(input: CreateCardInput): Promise<Card | null> {
   const { data: lastCard } = await supabase
     .from("cards")
     .select("position")
-    .eq("list_id", input.list_id)
+    .eq("list_id", validData.list_id)
     .order("position", { ascending: false })
     .limit(1)
     .single();
@@ -46,10 +61,10 @@ export async function createCard(input: CreateCardInput): Promise<Card | null> {
   const { data: card, error } = await supabase
     .from("cards")
     .insert({
-      list_id: input.list_id,
-      title: input.title,
-      description: input.description || null,
-      due_date: input.due_date || null,
+      list_id: validData.list_id,
+      title: validData.title,
+      description: validData.description || null,
+      due_date: null,
       position,
     })
     .select()
@@ -64,7 +79,7 @@ export async function createCard(input: CreateCardInput): Promise<Card | null> {
   const { data: list } = await supabase
     .from("lists")
     .select("board_id")
-    .eq("id", input.list_id)
+    .eq("id", validData.list_id)
     .single();
 
   if (list) {
@@ -84,6 +99,13 @@ export async function createCard(input: CreateCardInput): Promise<Card | null> {
  * Get a card with all its relations
  */
 export async function getCard(cardId: string): Promise<CardWithRelations | null> {
+  // Validate ID
+  const idValidation = z.string().uuid("Invalid card ID").safeParse(cardId);
+  if (!idValidation.success) {
+    console.error("Invalid card ID");
+    return null;
+  }
+
   // Verify user has access to this card
   const access = await verifyCardAccess(cardId);
   if (!access.allowed) {
@@ -144,6 +166,21 @@ export async function updateCard(
   cardId: string,
   input: UpdateCardInput
 ): Promise<Card | null> {
+  // Validate ID
+  const idValidation = z.string().uuid("Invalid card ID").safeParse(cardId);
+  if (!idValidation.success) {
+    console.error("Invalid card ID");
+    return null;
+  }
+
+  // Validate input
+  const validation = validateInput(updateCardSchema, input);
+  if (!validation.success) {
+    console.error("Validation failed:", validation.error);
+    return null;
+  }
+  const validData = validation.data;
+
   const user = await getCurrentUser();
   
   if (!user) {
@@ -166,8 +203,17 @@ export async function updateCard(
     .eq("id", cardId)
     .single();
 
+  // Build update object - need to handle list_id and position separately as they're not in the schema
+  const updateData: Record<string, unknown> = { ...validData };
+
   // If moving to a different list, verify access to the target list
   if (input.list_id) {
+    const listIdValidation = z.string().uuid("Invalid list ID").safeParse(input.list_id);
+    if (!listIdValidation.success) {
+      console.error("Invalid target list ID");
+      return null;
+    }
+
     const targetListAccess = await verifyListAccess(input.list_id);
     if (!targetListAccess.allowed) {
       console.error("User does not have access to the target list");
@@ -182,12 +228,18 @@ export async function updateCard(
       .limit(1)
       .single();
 
-    input.position = lastCard ? lastCard.position + 1 : 0;
+    updateData.list_id = input.list_id;
+    updateData.position = lastCard ? lastCard.position + 1 : 0;
+  }
+
+  // Handle is_complete separately as it's not in the base schema
+  if (input.is_complete !== undefined) {
+    updateData.is_complete = input.is_complete;
   }
 
   const { data: card, error } = await supabase
     .from("cards")
-    .update(input)
+    .update(updateData)
     .eq("id", cardId)
     .select()
     .single();
@@ -236,6 +288,13 @@ export async function updateCard(
  * Delete a card
  */
 export async function deleteCard(cardId: string): Promise<boolean> {
+  // Validate ID
+  const idValidation = z.string().uuid("Invalid card ID").safeParse(cardId);
+  if (!idValidation.success) {
+    console.error("Invalid card ID");
+    return false;
+  }
+
   // Verify user has access to this card
   const access = await verifyCardAccess(cardId);
   if (!access.allowed) {
@@ -266,6 +325,25 @@ export async function moveCard(
   toListId: string,
   position: number
 ): Promise<boolean> {
+  // Validate IDs
+  const cardIdValidation = z.string().uuid("Invalid card ID").safeParse(cardId);
+  if (!cardIdValidation.success) {
+    console.error("Invalid card ID");
+    return false;
+  }
+
+  const listIdValidation = z.string().uuid("Invalid list ID").safeParse(toListId);
+  if (!listIdValidation.success) {
+    console.error("Invalid list ID");
+    return false;
+  }
+
+  const positionValidation = z.number().int().min(0).safeParse(position);
+  if (!positionValidation.success) {
+    console.error("Invalid position");
+    return false;
+  }
+
   const user = await getCurrentUser();
   
   if (!user) {
@@ -361,6 +439,19 @@ export async function reorderCards(
   listId: string,
   cardIds: string[]
 ): Promise<boolean> {
+  // Validate input
+  const listIdValidation = z.string().uuid("Invalid list ID").safeParse(listId);
+  if (!listIdValidation.success) {
+    console.error("Invalid list ID");
+    return false;
+  }
+
+  const cardIdsValidation = z.array(z.string().uuid("Invalid card ID")).min(1).safeParse(cardIds);
+  if (!cardIdsValidation.success) {
+    console.error("Invalid card IDs:", cardIdsValidation.error.issues[0]?.message);
+    return false;
+  }
+
   // Verify user has access to the list
   const access = await verifyListAccess(listId);
   if (!access.allowed) {
@@ -394,6 +485,19 @@ export async function addLabelToCard(
   cardId: string,
   labelId: string
 ): Promise<boolean> {
+  // Validate IDs
+  const cardIdValidation = z.string().uuid("Invalid card ID").safeParse(cardId);
+  if (!cardIdValidation.success) {
+    console.error("Invalid card ID");
+    return false;
+  }
+
+  const labelIdValidation = z.string().uuid("Invalid label ID").safeParse(labelId);
+  if (!labelIdValidation.success) {
+    console.error("Invalid label ID");
+    return false;
+  }
+
   const user = await getCurrentUser();
   
   if (!user) {
@@ -451,6 +555,19 @@ export async function removeLabelFromCard(
   cardId: string,
   labelId: string
 ): Promise<boolean> {
+  // Validate IDs
+  const cardIdValidation = z.string().uuid("Invalid card ID").safeParse(cardId);
+  if (!cardIdValidation.success) {
+    console.error("Invalid card ID");
+    return false;
+  }
+
+  const labelIdValidation = z.string().uuid("Invalid label ID").safeParse(labelId);
+  if (!labelIdValidation.success) {
+    console.error("Invalid label ID");
+    return false;
+  }
+
   // Verify user has access to this card
   const access = await verifyCardAccess(cardId);
   if (!access.allowed) {
@@ -481,6 +598,19 @@ export async function assignUserToCard(
   cardId: string,
   userId: string
 ): Promise<boolean> {
+  // Validate IDs
+  const cardIdValidation = z.string().uuid("Invalid card ID").safeParse(cardId);
+  if (!cardIdValidation.success) {
+    console.error("Invalid card ID");
+    return false;
+  }
+
+  const userIdValidation = z.string().uuid("Invalid user ID").safeParse(userId);
+  if (!userIdValidation.success) {
+    console.error("Invalid user ID");
+    return false;
+  }
+
   const user = await getCurrentUser();
   
   if (!user) {
@@ -553,6 +683,19 @@ export async function unassignUserFromCard(
   cardId: string,
   userId: string
 ): Promise<boolean> {
+  // Validate IDs
+  const cardIdValidation = z.string().uuid("Invalid card ID").safeParse(cardId);
+  if (!cardIdValidation.success) {
+    console.error("Invalid card ID");
+    return false;
+  }
+
+  const userIdValidation = z.string().uuid("Invalid user ID").safeParse(userId);
+  if (!userIdValidation.success) {
+    console.error("Invalid user ID");
+    return false;
+  }
+
   // Verify user has access to this card
   const access = await verifyCardAccess(cardId);
   if (!access.allowed) {
@@ -580,6 +723,14 @@ export async function unassignUserFromCard(
  * Add a comment to a card
  */
 export async function addComment(input: CreateCommentInput): Promise<Comment | null> {
+  // Validate input
+  const validation = validateInput(createCommentSchema, input);
+  if (!validation.success) {
+    console.error("Validation failed:", validation.error);
+    return null;
+  }
+  const validData = validation.data;
+
   const user = await getCurrentUser();
   
   if (!user) {
@@ -587,7 +738,7 @@ export async function addComment(input: CreateCommentInput): Promise<Comment | n
   }
 
   // Verify user has access to this card
-  const access = await verifyCardAccess(input.card_id);
+  const access = await verifyCardAccess(validData.card_id);
   if (!access.allowed) {
     console.error("User does not have access to this card");
     return null;
@@ -598,9 +749,9 @@ export async function addComment(input: CreateCommentInput): Promise<Comment | n
   const { data: comment, error } = await supabase
     .from("comments")
     .insert({
-      card_id: input.card_id,
+      card_id: validData.card_id,
       user_id: user.id,
-      content: input.content,
+      content: validData.content,
     })
     .select()
     .single();
@@ -613,11 +764,11 @@ export async function addComment(input: CreateCommentInput): Promise<Comment | n
   // Log activity
   if (access.boardId) {
     await supabase.from("activity_log").insert({
-      card_id: input.card_id,
+      card_id: validData.card_id,
       board_id: access.boardId,
       user_id: user.id,
       action: "commented",
-      details: { preview: input.content.slice(0, 50) },
+      details: { preview: validData.content.slice(0, 50) },
     });
   }
 
@@ -625,13 +776,13 @@ export async function addComment(input: CreateCommentInput): Promise<Comment | n
   const { data: assignees } = await supabase
     .from("card_assignees")
     .select("user_id")
-    .eq("card_id", input.card_id);
+    .eq("card_id", validData.card_id);
 
   if (assignees && assignees.length > 0) {
     const { data: card } = await supabase
       .from("cards")
       .select("title")
-      .eq("id", input.card_id)
+      .eq("id", validData.card_id)
       .single();
 
     const usersToNotify = assignees
@@ -643,8 +794,8 @@ export async function addComment(input: CreateCommentInput): Promise<Comment | n
         user_id: userId,
         type: "comment_added",
         title: "New comment on your card",
-        message: `${user.name || "Someone"} commented on "${card.title}": "${input.content.slice(0, 50)}${input.content.length > 50 ? "..." : ""}"`,
-        link: `/dashboard/board/${access.boardId}?card=${input.card_id}`,
+        message: `${user.name || "Someone"} commented on "${card.title}": "${validData.content.slice(0, 50)}${validData.content.length > 50 ? "..." : ""}"`,
+        link: `/dashboard/board/${access.boardId}?card=${validData.card_id}`,
       }));
 
       await supabase.from("notifications").insert(notifications);
@@ -658,6 +809,13 @@ export async function addComment(input: CreateCommentInput): Promise<Comment | n
  * Get comments for a card
  */
 export async function getComments(cardId: string): Promise<(Comment & { user: { name: string; avatar_url: string } })[]> {
+  // Validate ID
+  const idValidation = z.string().uuid("Invalid card ID").safeParse(cardId);
+  if (!idValidation.success) {
+    console.error("Invalid card ID");
+    return [];
+  }
+
   // Verify user has access to this card
   const access = await verifyCardAccess(cardId);
   if (!access.allowed) {
@@ -688,6 +846,13 @@ export async function getComments(cardId: string): Promise<(Comment & { user: { 
  * Delete a comment
  */
 export async function deleteComment(commentId: string): Promise<boolean> {
+  // Validate ID
+  const idValidation = z.string().uuid("Invalid comment ID").safeParse(commentId);
+  if (!idValidation.success) {
+    console.error("Invalid comment ID");
+    return false;
+  }
+
   const user = await getCurrentUser();
   
   if (!user) {
