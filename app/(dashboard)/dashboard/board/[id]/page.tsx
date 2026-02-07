@@ -71,10 +71,8 @@ export default function BoardPage() {
     const [loading, setLoading] = useState(true);
     const [addingList, setAddingList] = useState(false);
     const [newListName, setNewListName] = useState("");
-    const [creatingList, setCreatingList] = useState(false);
     const [addingCardToList, setAddingCardToList] = useState<string | null>(null);
     const [newCardTitle, setNewCardTitle] = useState("");
-    const [creatingCard, setCreatingCard] = useState(false);
     const [selectedCard, setSelectedCard] = useState<CardWithRelations | null>(null);
     const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
     const [showBoardSettings, setShowBoardSettings] = useState(false);
@@ -84,6 +82,13 @@ export default function BoardPage() {
         async function fetchBoard() {
             try {
                 const b = await getBoardWithLists(boardId);
+                // Sort lists and cards by position on initial load
+                if (b) {
+                    b.lists = b.lists.sort((a, b) => a.position - b.position);
+                    b.lists.forEach(list => {
+                        list.cards = list.cards.sort((a, b) => a.position - b.position);
+                    });
+                }
                 setBoard(b);
 
                 // Fetch workspace members for assignee picker
@@ -105,6 +110,10 @@ export default function BoardPage() {
     const handleCardInsert = useCallback((card: Card) => {
         setBoard((prev) => {
             if (!prev) return prev;
+            // Check if card already exists (from optimistic update)
+            const existingList = prev.lists.find((l) => l.cards.some((c) => c.id === card.id));
+            if (existingList) return prev; // Already exists, skip
+            
             return {
                 ...prev,
                 lists: prev.lists.map((list) =>
@@ -219,15 +228,27 @@ export default function BoardPage() {
             const [movedList] = newLists.splice(source.index, 1);
             newLists.splice(destination.index, 0, movedList);
 
+            // Store previous state for rollback
+            const previousLists = board.lists;
+
             // Optimistic update
             setBoard({ ...board, lists: newLists });
 
             // Persist to database
             const listIds = newLists.map((l) => l.id);
-            await reorderLists(boardId, listIds);
+            const success = await reorderLists(boardId, listIds);
+            
+            if (!success) {
+                // Rollback on failure
+                setBoard({ ...board, lists: previousLists });
+                toast.error("Failed to reorder lists");
+            }
         } else if (type === "CARD") {
             const sourceListId = source.droppableId;
             const destListId = destination.droppableId;
+
+            // Store previous state for rollback
+            const previousLists = board.lists;
 
             if (sourceListId === destListId) {
                 // Reordering within the same list
@@ -248,7 +269,13 @@ export default function BoardPage() {
 
                 // Persist to database
                 const cardIds = newCards.map((c) => c.id);
-                await reorderCards(sourceListId, cardIds);
+                const success = await reorderCards(sourceListId, cardIds);
+                
+                if (!success) {
+                    // Rollback on failure
+                    setBoard({ ...board, lists: previousLists });
+                    toast.error("Failed to reorder cards");
+                }
             } else {
                 // Moving card to different list
                 const sourceList = board.lists.find((l) => l.id === sourceListId);
@@ -272,62 +299,173 @@ export default function BoardPage() {
                 });
 
                 // Persist to database
-                await moveCard(movedCard.id, destListId, destination.index);
+                const success = await moveCard(movedCard.id, destListId, destination.index);
+                
+                if (!success) {
+                    // Rollback on failure
+                    setBoard({ ...board, lists: previousLists });
+                    toast.error("Failed to move card");
+                }
             }
         }
     };
 
-    // Create List Handler
+    // Create List Handler - Instant optimistic update
     const handleAddList = async () => {
         if (!newListName.trim() || !board) return;
 
-        setCreatingList(true);
+        const tempId = `temp-${Date.now()}`;
+        const tempList: ListWithCards = {
+            id: tempId,
+            board_id: boardId,
+            name: newListName.trim(),
+            color: "#6366f1",
+            position: board.lists.length,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            cards: [],
+        };
+
+        // Immediately update UI
+        setBoard({
+            ...board,
+            lists: [...board.lists, tempList],
+        });
+        setNewListName("");
+        setAddingList(false);
+
         try {
-            const list = await createList({ board_id: boardId, name: newListName });
+            const list = await createList({ board_id: boardId, name: tempList.name });
             if (list) {
-                // Real-time will handle adding to state, but add optimistically too
-                setBoard({
-                    ...board,
-                    lists: [...board.lists, { ...list, cards: [] }],
+                // Replace temp list with real list
+                setBoard((prev) => {
+                    if (!prev) return prev;
+                    return {
+                        ...prev,
+                        lists: prev.lists.map((l) =>
+                            l.id === tempId ? { ...list, cards: [] } : l
+                        ),
+                    };
                 });
-                setNewListName("");
-                setAddingList(false);
                 toast.success("List created");
+            } else {
+                // Remove temp list on failure
+                setBoard((prev) => {
+                    if (!prev) return prev;
+                    return {
+                        ...prev,
+                        lists: prev.lists.filter((l) => l.id !== tempId),
+                    };
+                });
+                toast.error("Failed to create list");
             }
         } catch (error) {
             console.error("Error creating list:", error);
+            // Remove temp list on error
+            setBoard((prev) => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    lists: prev.lists.filter((l) => l.id !== tempId),
+                };
+            });
             toast.error("Failed to create list");
-        } finally {
-            setCreatingList(false);
         }
     };
 
-    // Create Card Handler
+    // Create Card Handler - Instant optimistic update
     const handleAddCard = async (listId: string) => {
-        if (!newCardTitle.trim() || !board || creatingCard) return;
+        if (!newCardTitle.trim() || !board) return;
 
-        setCreatingCard(true);
+        // Don't allow adding to temp lists
+        if (listId.startsWith("temp-")) {
+            toast.error("Please wait for the list to be created");
+            return;
+        }
+
+        const list = board.lists.find((l) => l.id === listId);
+        if (!list) return;
+
+        const tempId = `temp-card-${Date.now()}`;
+        const tempCard: CardWithRelations = {
+            id: tempId,
+            list_id: listId,
+            title: newCardTitle.trim(),
+            description: null,
+            position: list.cards.length,
+            due_date: null,
+            is_complete: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            labels: [],
+            assignees: [],
+            comments_count: 0,
+            attachments_count: 0,
+        };
+
+        // Immediately update UI
+        setBoard({
+            ...board,
+            lists: board.lists.map((l) =>
+                l.id === listId
+                    ? { ...l, cards: [...l.cards, tempCard] }
+                    : l
+            ),
+        });
+        setNewCardTitle("");
+        setAddingCardToList(null);
+
         try {
-            const card = await createCard({ list_id: listId, title: newCardTitle });
+            const card = await createCard({ list_id: listId, title: tempCard.title });
             if (card) {
-                // Real-time will handle it, but optimistic update
-                setBoard({
-                    ...board,
-                    lists: board.lists.map((list) =>
-                        list.id === listId
-                            ? { ...list, cards: [...list.cards, card as CardWithRelations] }
-                            : list
-                    ),
+                // Replace temp card with real card
+                setBoard((prev) => {
+                    if (!prev) return prev;
+                    return {
+                        ...prev,
+                        lists: prev.lists.map((l) =>
+                            l.id === listId
+                                ? {
+                                    ...l,
+                                    cards: l.cards.map((c) =>
+                                        c.id === tempId ? { ...tempCard, ...card } as CardWithRelations : c
+                                    ),
+                                }
+                                : l
+                        ),
+                    };
                 });
-                setNewCardTitle("");
-                setAddingCardToList(null);
                 toast.success("Card created");
+            } else {
+                // Remove temp card on failure
+                setBoard((prev) => {
+                    if (!prev) return prev;
+                    return {
+                        ...prev,
+                        lists: prev.lists.map((l) =>
+                            l.id === listId
+                                ? { ...l, cards: l.cards.filter((c) => c.id !== tempId) }
+                                : l
+                        ),
+                    };
+                });
+                toast.error("Failed to create card");
             }
         } catch (error) {
             console.error("Error creating card:", error);
+            // Remove temp card on error
+            setBoard((prev) => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    lists: prev.lists.map((l) =>
+                        l.id === listId
+                            ? { ...l, cards: l.cards.filter((c) => c.id !== tempId) }
+                            : l
+                    ),
+                };
+            });
             toast.error("Failed to create card");
-        } finally {
-            setCreatingCard(false);
         }
     };
 
@@ -458,10 +596,8 @@ export default function BoardPage() {
                             className="flex-1 overflow-x-auto overflow-y-hidden p-4"
                         >
                             <div className="flex gap-4 h-full items-start">
-                                {/* Lists */}
-                                {board.lists
-                                    .sort((a, b) => a.position - b.position)
-                                    .map((list, index) => (
+                                {/* Lists - order maintained by optimistic updates, no sorting needed */}
+                                {board.lists.map((list, index) => (
                                         <Draggable
                                             key={list.id}
                                             draggableId={list.id}
@@ -477,7 +613,6 @@ export default function BoardPage() {
                                                         dragHandleProps={provided.dragHandleProps}
                                                         onAddCard={() => setAddingCardToList(list.id)}
                                                         addingCard={addingCardToList === list.id}
-                                                        creatingCard={creatingCard}
                                                         newCardTitle={newCardTitle}
                                                         setNewCardTitle={setNewCardTitle}
                                                         onSubmitCard={() => handleAddCard(list.id)}
@@ -535,15 +670,13 @@ export default function BoardPage() {
                                                 onKeyDown={(e) => e.key === "Enter" && handleAddList()}
                                                 className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-600 mb-2"
                                                 autoFocus
-                                                disabled={creatingList}
                                             />
                                             <div className="flex gap-2">
                                                 <button
                                                     onClick={handleAddList}
-                                                    disabled={creatingList || !newListName.trim()}
+                                                    disabled={!newListName.trim()}
                                                     className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg text-sm font-medium hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50"
                                                 >
-                                                    {creatingList && <Loader2 className="w-4 h-4 animate-spin" />}
                                                     Add List
                                                 </button>
                                                 <button
@@ -625,7 +758,6 @@ interface ListColumnProps {
     dragHandleProps: any;
     onAddCard: () => void;
     addingCard: boolean;
-    creatingCard: boolean;
     newCardTitle: string;
     setNewCardTitle: (title: string) => void;
     onSubmitCard: () => void;
@@ -641,7 +773,6 @@ function ListColumn({
     dragHandleProps,
     onAddCard,
     addingCard,
-    creatingCard,
     newCardTitle,
     setNewCardTitle,
     onSubmitCard,
@@ -772,9 +903,8 @@ function ListColumn({
                             {...provided.droppableProps}
                             className="flex-1 overflow-y-auto p-2 space-y-2 min-h-5"
                         >
-                            {list.cards
-                                .sort((a, b) => a.position - b.position)
-                                .map((card, index) => (
+                            {/* Cards - order maintained by optimistic updates, no sorting needed */}
+                            {list.cards.map((card, index) => (
                                     <Draggable
                                         key={card.id}
                                         draggableId={card.id}
@@ -804,28 +934,25 @@ function ListColumn({
                                         value={newCardTitle}
                                         onChange={(e) => setNewCardTitle(e.target.value)}
                                         onKeyDown={(e) => {
-                                            if (e.key === "Enter" && !e.shiftKey && !creatingCard) {
+                                            if (e.key === "Enter" && !e.shiftKey) {
                                                 e.preventDefault();
                                                 onSubmitCard();
                                             }
                                         }}
-                                        className="w-full px-2 py-1.5 bg-transparent text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 text-sm resize-none focus:outline-none min-h-15 disabled:opacity-50"
+                                        className="w-full px-2 py-1.5 bg-transparent text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 text-sm resize-none focus:outline-none min-h-15"
                                         autoFocus
-                                        disabled={creatingCard}
                                     />
                                     <div className="flex gap-2 mt-2">
                                         <button
                                             onClick={onSubmitCard}
-                                            disabled={creatingCard || !newCardTitle.trim()}
+                                            disabled={!newCardTitle.trim()}
                                             className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg text-sm font-medium hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            {creatingCard && <Loader2 className="w-4 h-4 animate-spin" />}
                                             Add Card
                                         </button>
                                         <button
                                             onClick={onCancelAdd}
-                                            disabled={creatingCard}
-                                            className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors disabled:opacity-50"
+                                            className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
                                         >
                                             <X className="w-5 h-5 text-zinc-500" />
                                         </button>
