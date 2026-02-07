@@ -20,6 +20,7 @@ export const queryKeys = {
         byWorkspace: (workspaceId: string) => [...queryKeys.boards.all, "workspace", workspaceId] as const,
         detail: (id: string) => [...queryKeys.boards.all, "detail", id] as const,
         withLists: (id: string) => [...queryKeys.boards.all, "withLists", id] as const,
+        allUser: () => [...queryKeys.boards.all, "allUser"] as const,
     },
 
     // List queries
@@ -35,6 +36,7 @@ export const queryKeys = {
         detail: (id: string) => [...queryKeys.cards.all, "detail", id] as const,
         comments: (id: string) => [...queryKeys.cards.all, "comments", id] as const,
         checklists: (id: string) => [...queryKeys.cards.all, "checklists", id] as const,
+        withDueDates: () => [...queryKeys.cards.all, "withDueDates"] as const,
     },
 
     // Activity queries
@@ -49,5 +51,18 @@ export const queryKeys = {
     notifications: {
         all: ["notifications"] as const,
         unread: () => [...queryKeys.notifications.all, "unread"] as const,
+    },
+
+    // Dashboard queries
+    dashboard: {
+        all: ["dashboard"] as const,
+        stats: () => [...queryKeys.dashboard.all, "stats"] as const,
+        analytics: () => [...queryKeys.dashboard.all, "analytics"] as const,
+    },
+
+    // Team queries
+    team: {
+        all: ["team"] as const,
+        members: () => [...queryKeys.team.all, "members"] as const,
     },
 } as const;

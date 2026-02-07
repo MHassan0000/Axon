@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React from "react";
 import {
     Activity,
     Clock,
@@ -14,7 +14,7 @@ import {
     Edit3,
     XCircle,
 } from "lucide-react";
-import { getRecentActivity } from "@/lib/actions";
+import { useRecentActivityQuery } from "@/lib/hooks";
 import { ActivityPageSkeleton } from "@/components/ui/Skeleton";
 import type { ActivityLog } from "@/lib/types/database";
 
@@ -123,25 +123,10 @@ const formatTimeAgo = (dateString: string): string => {
     return date.toLocaleDateString();
 };
 
-export default function MessagesPage() {
-    const [activities, setActivities] = useState<ActivityWithUser[]>([]);
-    const [loading, setLoading] = useState(true);
+export default function ActivityPage() {
+    const { data: activities = [], isLoading } = useRecentActivityQuery(50);
 
-    useEffect(() => {
-        async function fetchActivity() {
-            try {
-                const data = await getRecentActivity(50);
-                setActivities(data as ActivityWithUser[]);
-            } catch (error) {
-                console.error("Error fetching activity:", error);
-            } finally {
-                setLoading(false);
-            }
-        }
-        fetchActivity();
-    }, []);
-
-    if (loading) {
+    if (isLoading) {
         return <ActivityPageSkeleton />;
     }
 
@@ -181,7 +166,7 @@ export default function MessagesPage() {
                 ) : (
                     <div className="max-w-2xl space-y-2">
                         {activities.map((activity) => (
-                            <ActivityItem key={activity.id} activity={activity} />
+                            <ActivityItem key={activity.id} activity={activity as ActivityWithUser} />
                         ))}
                     </div>
                 )}

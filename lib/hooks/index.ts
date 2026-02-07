@@ -21,3 +21,12 @@ export {
     useUpdateBoardMutation,
     useDeleteBoardMutation,
 } from "./useBoards";
+
+export {
+    useAllUserBoardsQuery,
+    useAllTeamMembersQuery,
+    useCardsWithDueDatesQuery,
+    useAnalyticsSummaryQuery,
+    useDashboardStatsQuery,
+    useRecentActivityQuery,
+} from "./useDashboard";

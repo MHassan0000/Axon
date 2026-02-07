@@ -1,15 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
     Calendar as CalendarIcon,
     ChevronLeft,
     ChevronRight,
 } from "lucide-react";
-import { useWorkspaces } from "@/lib/context/WorkspaceContext";
-import { getBoards, getBoardWithLists } from "@/lib/actions";
+import { useCardsWithDueDatesQuery } from "@/lib/hooks";
 import { CalendarPageSkeleton } from "@/components/ui/Skeleton";
-import type { CardWithRelations } from "@/lib/types/database";
+import type { CalendarCard } from "@/lib/actions";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -17,81 +16,27 @@ const MONTHS = [
     "July", "August", "September", "October", "November", "December"
 ];
 
-interface CardDueDate {
-    card: CardWithRelations;
-    boardName: string;
-    boardColor: string;
-}
-
 export default function CalendarPage() {
-    const { workspaces, loading: loadingWorkspaces } = useWorkspaces();
+    const { data: cards = [], isLoading } = useCardsWithDueDatesQuery();
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [cardsByDate, setCardsByDate] = useState<Map<string, CardDueDate[]>>(new Map());
-    const [loading, setLoading] = useState(true);
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
 
-    // Fetch all cards with due dates using parallel fetching
-    useEffect(() => {
-        async function fetchCards() {
-            if (loadingWorkspaces) return;
-
-            try {
-                // Step 1: Fetch all boards for all workspaces in parallel
-                const boardsPerWorkspace = await Promise.all(
-                    workspaces.map((ws) => getBoards(ws.id))
-                );
-
-                // Flatten all boards
-                const allBoards = boardsPerWorkspace.flat();
-
-                // Step 2: Fetch all board details in parallel
-                const boardsWithLists = await Promise.all(
-                    allBoards.map((board) => getBoardWithLists(board.id))
-                );
-
-                // Step 3: Extract all cards with due dates
-                const allCards: CardDueDate[] = [];
-                boardsWithLists.forEach((boardWithLists, index) => {
-                    if (boardWithLists?.lists) {
-                        const board = allBoards[index];
-                        for (const list of boardWithLists.lists) {
-                            for (const card of list.cards) {
-                                if (card.due_date) {
-                                    allCards.push({
-                                        card,
-                                        boardName: board.name,
-                                        boardColor: board.background_color || "#6366f1",
-                                    });
-                                }
-                            }
-                        }
-                    }
-                });
-
-                // Group by date (YYYY-MM-DD)
-                const grouped = new Map<string, CardDueDate[]>();
-                allCards.forEach((item) => {
-                    const dateKey = new Date(item.card.due_date!).toISOString().split("T")[0];
-                    const existing = grouped.get(dateKey) || [];
-                    existing.push(item);
-                    grouped.set(dateKey, existing);
-                });
-
-                setCardsByDate(grouped);
-            } catch (error) {
-                console.error("Error fetching cards:", error);
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        fetchCards();
-    }, [workspaces, loadingWorkspaces]);
+    // Group cards by date (YYYY-MM-DD)
+    const cardsByDate = useMemo(() => {
+        const grouped = new Map<string, CalendarCard[]>();
+        cards.forEach((card) => {
+            const dateKey = new Date(card.due_date).toISOString().split("T")[0];
+            const existing = grouped.get(dateKey) || [];
+            existing.push(card);
+            grouped.set(dateKey, existing);
+        });
+        return grouped;
+    }, [cards]);
 
     // Memoize calendar computation
-    const { calendarDays, firstDayOfMonth, daysInMonth } = useMemo(() => {
+    const { calendarDays } = useMemo(() => {
         const firstDay = new Date(year, month, 1).getDay();
         const days = new Date(year, month + 1, 0).getDate();
         
@@ -103,7 +48,7 @@ export default function CalendarPage() {
             calDays.push(i);
         }
         
-        return { calendarDays: calDays, firstDayOfMonth: firstDay, daysInMonth: days };
+        return { calendarDays: calDays };
     }, [year, month]);
 
     const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
@@ -118,18 +63,16 @@ export default function CalendarPage() {
 
     // Memoize getCardsForDay helper
     const getCardsForDay = useMemo(() => {
-        return (day: number): CardDueDate[] => {
+        return (day: number): CalendarCard[] => {
             const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
             return cardsByDate.get(dateKey) || [];
         };
     }, [year, month, cardsByDate]);
 
     // Memoize total cards count
-    const totalCardsWithDueDates = useMemo(() => 
-        Array.from(cardsByDate.values()).flat().length
-    , [cardsByDate]);
+    const totalCardsWithDueDates = cards.length;
 
-    if (loading || loadingWorkspaces) {
+    if (isLoading) {
         return <CalendarPageSkeleton />;
     }
 
@@ -199,7 +142,7 @@ export default function CalendarPage() {
                     {/* Calendar Days */}
                     <div className="grid grid-cols-7">
                         {calendarDays.map((day, index) => {
-                            const cards = day ? getCardsForDay(day) : [];
+                            const dayCards = day ? getCardsForDay(day) : [];
                             return (
                                 <div
                                     key={index}
@@ -224,19 +167,19 @@ export default function CalendarPage() {
                                             </span>
                                             {/* Due Date Cards */}
                                             <div className="mt-1 space-y-1">
-                                                {cards.slice(0, 3).map((item) => (
+                                                {dayCards.slice(0, 3).map((card) => (
                                                     <div
-                                                        key={item.card.id}
+                                                        key={card.id}
                                                         className="px-1.5 py-0.5 text-xs rounded truncate text-white"
-                                                        style={{ backgroundColor: item.boardColor }}
-                                                        title={`${item.card.title} (${item.boardName})`}
+                                                        style={{ backgroundColor: card.board_color || "#6366f1" }}
+                                                        title={`${card.title} (${card.board_name})`}
                                                     >
-                                                        {item.card.title}
+                                                        {card.title}
                                                     </div>
                                                 ))}
-                                                {cards.length > 3 && (
+                                                {dayCards.length > 3 && (
                                                     <div className="text-xs text-zinc-500 pl-1.5">
-                                                        +{cards.length - 3} more
+                                                        +{dayCards.length - 3} more
                                                     </div>
                                                 )}
                                             </div>

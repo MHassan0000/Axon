@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import {
     LayoutDashboard,
     Settings,
@@ -49,7 +49,15 @@ export default function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
 
+    // Memoize workspace IDs to prevent useEffect from re-running when workspace objects change
+    // but IDs stay the same
+    const workspaceIds = useMemo(
+        () => workspaces.slice(0, 5).map((w) => w.id),
+        [workspaces]
+    );
+
     // Prefetch common routes on mount for faster navigation
+    // Only re-run when workspace IDs actually change, not on every render
     useEffect(() => {
         // Prefetch main navigation routes
         mainNavItems.forEach((item) => {
@@ -57,10 +65,10 @@ export default function Sidebar() {
         });
 
         // Prefetch workspace routes
-        workspaces.slice(0, 5).forEach((workspace) => {
-            router.prefetch(`/dashboard/workspace/${workspace.id}`);
+        workspaceIds.forEach((id) => {
+            router.prefetch(`/dashboard/workspace/${id}`);
         });
-    }, [router, workspaces]);
+    }, [router, workspaceIds]);
 
     // Check if path matches or starts with href (for nested routes)
     const isActive = (href: string) => {

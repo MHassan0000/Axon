@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getWorkspaces } from "@/lib/actions";
 import { queryKeys } from "@/lib/hooks/queryKeys";
@@ -23,15 +23,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
-    // Get query client for cache invalidation
-    let queryClient: ReturnType<typeof useQueryClient> | null = null;
+    // Use ref to store queryClient to avoid re-render loops
+    // The ref persists across renders without causing dependency changes
+    const queryClientRef = useRef<ReturnType<typeof useQueryClient> | null>(null);
     try {
-        queryClient = useQueryClient();
+        queryClientRef.current = useQueryClient();
     } catch {
         // Query client not available (outside QueryProvider)
     }
 
-    // Fetch workspaces from server
+    // Fetch workspaces from server - stable function with no dependencies
     const refreshWorkspaces = useCallback(async () => {
         try {
             setLoading(true);
@@ -40,8 +41,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             setWorkspaces(ws);
             
             // Also update React Query cache if available
-            if (queryClient) {
-                queryClient.setQueryData(queryKeys.workspaces.list(), ws);
+            if (queryClientRef.current) {
+                queryClientRef.current.setQueryData(queryKeys.workspaces.list(), ws);
             }
         } catch (err) {
             console.error("Error fetching workspaces:", err);
@@ -49,9 +50,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         } finally {
             setLoading(false);
         }
-    }, [queryClient]);
+    }, []); // Empty deps - function is now stable
 
-    // Initial fetch on mount
+    // Initial fetch on mount only
     useEffect(() => {
         refreshWorkspaces();
     }, [refreshWorkspaces]);
@@ -61,26 +62,26 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         setWorkspaces((prev) => [workspace, ...prev]);
         
         // Also update React Query cache
-        if (queryClient) {
-            queryClient.setQueryData<Workspace[]>(
+        if (queryClientRef.current) {
+            queryClientRef.current.setQueryData<Workspace[]>(
                 queryKeys.workspaces.list(),
                 (old) => (old ? [workspace, ...old] : [workspace])
             );
         }
-    }, [queryClient]);
+    }, []); // Empty deps - uses ref
 
     // Remove workspace locally
     const removeWorkspace = useCallback((workspaceId: string) => {
         setWorkspaces((prev) => prev.filter((w) => w.id !== workspaceId));
         
         // Also update React Query cache
-        if (queryClient) {
-            queryClient.setQueryData<Workspace[]>(
+        if (queryClientRef.current) {
+            queryClientRef.current.setQueryData<Workspace[]>(
                 queryKeys.workspaces.list(),
                 (old) => old?.filter((w) => w.id !== workspaceId) || []
             );
         }
-    }, [queryClient]);
+    }, []); // Empty deps - uses ref
 
     // Update workspace locally
     const updateWorkspace = useCallback((workspace: Workspace) => {
@@ -89,13 +90,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         );
         
         // Also update React Query cache
-        if (queryClient) {
-            queryClient.setQueryData<Workspace[]>(
+        if (queryClientRef.current) {
+            queryClientRef.current.setQueryData<Workspace[]>(
                 queryKeys.workspaces.list(),
                 (old) => old?.map((w) => (w.id === workspace.id ? workspace : w)) || []
             );
         }
-    }, [queryClient]);
+    }, []); // Empty deps - uses ref
 
     return (
         <WorkspaceContext.Provider

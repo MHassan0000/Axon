@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useMemo } from "react";
 import {
     Users,
     Mail,
@@ -10,59 +10,18 @@ import {
     LayoutGrid,
 } from "lucide-react";
 import { useWorkspaces } from "@/lib/context/WorkspaceContext";
-import { getWorkspaceMembers } from "@/lib/actions";
+import { useAllTeamMembersQuery } from "@/lib/hooks";
 import { TeamPageSkeleton } from "@/components/ui/Skeleton";
-import type { Workspace } from "@/lib/types/database";
-
-interface MemberWithWorkspace {
-    id: string;
-    name: string | null;
-    email: string;
-    avatar_url: string | null;
-    role: string;
-    workspaceId: string;
-    workspaceName: string;
-}
 
 export default function TeamPage() {
     const { workspaces, loading: loadingWorkspaces } = useWorkspaces();
-    const [members, setMembers] = useState<MemberWithWorkspace[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        async function fetchMembers() {
-            if (loadingWorkspaces) return;
-
-            try {
-                // Fetch all workspace members in parallel
-                const membersPerWorkspace = await Promise.all(
-                    workspaces.map(async (ws) => {
-                        const wsMembers = await getWorkspaceMembers(ws.id);
-                        return wsMembers.map((m) => ({
-                            ...m,
-                            workspaceId: ws.id,
-                            workspaceName: ws.name,
-                        }));
-                    })
-                );
-
-                // Flatten all members
-                setMembers(membersPerWorkspace.flat());
-            } catch (error) {
-                console.error("Error fetching members:", error);
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        fetchMembers();
-    }, [workspaces, loadingWorkspaces]);
+    const { data: members = [], isLoading: loadingMembers } = useAllTeamMembersQuery();
 
     // Memoize members grouped by workspace
     const membersByWorkspace = useMemo(() => 
         workspaces.map((ws) => ({
             workspace: ws,
-            members: members.filter((m) => m.workspaceId === ws.id),
+            members: members.filter((m) => m.workspace_id === ws.id),
         }))
     , [workspaces, members]);
 
@@ -82,7 +41,7 @@ export default function TeamPage() {
         }
     };
 
-    if (loading || loadingWorkspaces) {
+    if (loadingMembers || loadingWorkspaces) {
         return <TeamPageSkeleton />;
     }
 
@@ -119,7 +78,7 @@ export default function TeamPage() {
                     </div>
                 ) : (
                     <div className="space-y-8">
-                        {membersByWorkspace.map(({ workspace, members }) => (
+                        {membersByWorkspace.map(({ workspace, members: wsMembers }) => (
                             <section key={workspace.id}>
                                 <div className="flex items-center gap-2 mb-4">
                                     <LayoutGrid className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
@@ -127,12 +86,12 @@ export default function TeamPage() {
                                         {workspace.name}
                                     </h2>
                                     <span className="text-xs text-zinc-400 dark:text-zinc-500">
-                                        ({members.length})
+                                        ({wsMembers.length})
                                     </span>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {members.map((member) => (
+                                    {wsMembers.map((member) => (
                                         <div
                                             key={`${workspace.id}-${member.id}`}
                                             className="flex items-center gap-4 p-4 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl"
@@ -142,13 +101,13 @@ export default function TeamPage() {
                                                 {member.avatar_url ? (
                                                     <img
                                                         src={member.avatar_url}
-                                                        alt={member.name || "User"}
+                                                        alt={member.full_name || "User"}
                                                         className="w-12 h-12 rounded-full object-cover"
                                                     />
                                                 ) : (
                                                     <div className="w-12 h-12 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
                                                         <span className="text-lg font-bold text-zinc-600 dark:text-zinc-300">
-                                                            {(member.name || member.email)[0]?.toUpperCase()}
+                                                            {(member.full_name || member.email)[0]?.toUpperCase()}
                                                         </span>
                                                     </div>
                                                 )}
@@ -160,7 +119,7 @@ export default function TeamPage() {
                                             {/* Info */}
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                                                    {member.name || "Unnamed"}
+                                                    {member.full_name || "Unnamed"}
                                                 </p>
                                                 <p className="text-sm text-zinc-500 truncate flex items-center gap-1">
                                                     <Mail className="w-3 h-3" />

@@ -12,10 +12,11 @@ import {
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { syncCurrentUser, createWorkspace, createBoard, getBoards, getWorkspaceMembers, uploadBoardBackground } from "@/lib/actions";
+import { syncCurrentUser, createWorkspace, createBoard, uploadBoardBackground } from "@/lib/actions";
 import { useWorkspaces } from "@/lib/context/WorkspaceContext";
+import { useBoardsQuery, useDashboardStatsQuery } from "@/lib/hooks";
 import { workspaceNameSchema, boardNameSchema, boardColorSchema } from "@/lib/validations";
-import { DashboardPageSkeleton, SkeletonWorkspaceCard, SkeletonBoardCard, SkeletonStat } from "@/components/ui/Skeleton";
+import { DashboardPageSkeleton } from "@/components/ui/Skeleton";
 import type { Board, Workspace } from "@/lib/types/database";
 
 // Component to handle search params
@@ -30,6 +31,10 @@ function SearchParamsHandler({
 }) {
     const searchParams = useSearchParams();
     const router = useRouter();
+    
+    // Use first workspace ID as a stable primitive dependency
+    const firstWorkspaceId = workspaces[0]?.id;
+    const hasWorkspaces = workspaces.length > 0;
 
     useEffect(() => {
         const createType = searchParams.get("create");
@@ -37,24 +42,29 @@ function SearchParamsHandler({
             onCreateWorkspace();
             router.replace("/dashboard", { scroll: false });
         } else if (createType === "board") {
-            if (workspaces.length > 0) {
-                onCreateBoard(workspaces[0].id);
+            if (hasWorkspaces && firstWorkspaceId) {
+                onCreateBoard(firstWorkspaceId);
             } else {
                 toast.error("Create a workspace first before adding a board");
                 onCreateWorkspace();
             }
             router.replace("/dashboard", { scroll: false });
         }
-    }, [searchParams, router, workspaces, onCreateWorkspace, onCreateBoard]);
+    }, [searchParams, router, hasWorkspaces, firstWorkspaceId, onCreateWorkspace, onCreateBoard]);
 
     return null;
 }
 
 export default function DashboardPage() {
     const { workspaces, loading: loadingWorkspaces, addWorkspace } = useWorkspaces();
-    const [boards, setBoards] = useState<Board[]>([]);
-    const [teamMembersCount, setTeamMembersCount] = useState<number>(0);
-    const [loading, setLoading] = useState(true);
+    const firstWorkspaceId = workspaces[0]?.id;
+    
+    // Use React Query for boards - cached and optimized
+    const { data: boards = [], isLoading: loadingBoards } = useBoardsQuery(firstWorkspaceId || "");
+    
+    // Use React Query for stats - cached for 30s
+    const { data: stats } = useDashboardStatsQuery();
+    
     const [creating, setCreating] = useState(false);
     const [showCreateWorkspaceModal, setShowCreateWorkspaceModal] = useState(false);
     const [showCreateBoardModal, setShowCreateBoardModal] = useState(false);
@@ -66,6 +76,15 @@ export default function DashboardPage() {
     const [uploadingImage, setUploadingImage] = useState(false);
     const [isPending, startTransition] = useTransition();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // Sync user on mount (fire and forget)
+    const hasSyncedRef = useRef(false);
+    useEffect(() => {
+        if (!hasSyncedRef.current) {
+            hasSyncedRef.current = true;
+            syncCurrentUser().catch(console.error);
+        }
+    }, []);
 
     const router = useRouter();
 
@@ -77,40 +96,6 @@ export default function DashboardPage() {
         setSelectedWorkspaceId(workspaceId);
         setShowCreateBoardModal(true);
     }, []);
-
-    // Sync user and fetch boards on mount - with parallel fetching
-    useEffect(() => {
-        async function initDashboard() {
-            try {
-                // Start user sync in parallel (fire and forget for faster load)
-                syncCurrentUser().catch(console.error);
-
-                // Fetch boards for first workspace if exists
-                if (workspaces.length > 0) {
-                    // Parallel fetch: boards and members at the same time
-                    const [boardsResult, ...membersResults] = await Promise.all([
-                        getBoards(workspaces[0].id),
-                        ...workspaces.map(ws => getWorkspaceMembers(ws.id))
-                    ]);
-
-                    setBoards(boardsResult);
-
-                    // Get unique members across all workspaces
-                    const uniqueMembers = new Set<string>();
-                    membersResults.flat().forEach(m => uniqueMembers.add(m.id));
-                    setTeamMembersCount(uniqueMembers.size);
-                }
-            } catch (error) {
-                console.error("Error initializing dashboard:", error);
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        if (!loadingWorkspaces) {
-            initDashboard();
-        }
-    }, [workspaces, loadingWorkspaces]);
 
     const handleCreateWorkspace = async () => {
         // Validate input
@@ -257,7 +242,8 @@ export default function DashboardPage() {
     ], []);
 
     // Show skeleton while loading
-    if (loading || loadingWorkspaces) {
+    const isLoading = loadingWorkspaces || (firstWorkspaceId && loadingBoards);
+    if (isLoading) {
         return <DashboardPageSkeleton />;
     }
 
@@ -356,9 +342,9 @@ export default function DashboardPage() {
 
                         {/* Quick Stats */}
                         <section className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-zinc-200 dark:border-zinc-800/50">
-                            <StatCard title="Workspaces" value={workspaces.length.toString()} />
-                            <StatCard title="Boards" value={boards.length.toString()} />
-                            <StatCard title="Team Members" value={teamMembersCount.toString()} />
+                            <StatCard title="Workspaces" value={(stats?.totalWorkspaces ?? workspaces.length).toString()} />
+                            <StatCard title="Boards" value={(stats?.totalBoards ?? boards.length).toString()} />
+                            <StatCard title="Team Members" value={(stats?.teamMembersCount ?? 0).toString()} />
                         </section>
                     </div>
                 )}

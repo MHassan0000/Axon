@@ -126,3 +126,20 @@ export {
 } from "./notifications";
 
 export type { NotificationType } from "./notifications";
+
+// Dashboard optimized actions
+export {
+  getAllUserBoards,
+  getAllTeamMembers,
+  getCardsWithDueDates,
+  getAnalyticsSummary,
+  getDashboardStats,
+} from "./dashboard";
+
+export type {
+  DashboardStats,
+  BoardWithWorkspace,
+  TeamMember,
+  CalendarCard,
+  AnalyticsSummary,
+} from "./dashboard";

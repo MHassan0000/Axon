@@ -1,78 +1,70 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
     LayoutGrid,
-    Plus,
     Search,
-    Filter,
     Grid3X3,
     List,
     FolderKanban,
 } from "lucide-react";
 import Link from "next/link";
-import { toast } from "sonner";
 import { useWorkspaces } from "@/lib/context/WorkspaceContext";
-import { getBoards, createBoard } from "@/lib/actions";
+import { useAllUserBoardsQuery } from "@/lib/hooks";
 import { ProjectsPageSkeleton } from "@/components/ui/Skeleton";
 import type { Board } from "@/lib/types/database";
+import type { BoardWithWorkspace } from "@/lib/actions";
 
 interface BoardsByWorkspace {
     workspaceId: string;
     workspaceName: string;
-    boards: Board[];
+    boards: BoardWithWorkspace[];
 }
 
 export default function ProjectsPage() {
     const { workspaces, loading: loadingWorkspaces } = useWorkspaces();
-    const [boardsByWorkspace, setBoardsByWorkspace] = useState<BoardsByWorkspace[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { data: allBoards = [], isLoading: loadingBoards } = useAllUserBoardsQuery();
     const [searchQuery, setSearchQuery] = useState("");
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-    // Fetch all boards across all workspaces
-    useEffect(() => {
-        async function fetchAllBoards() {
-            if (loadingWorkspaces) return;
-
-            try {
-                const allBoards: BoardsByWorkspace[] = await Promise.all(
-                    workspaces.map(async (ws) => {
-                        const boards = await getBoards(ws.id);
-                        return {
-                            workspaceId: ws.id,
-                            workspaceName: ws.name,
-                            boards,
-                        };
-                    })
-                );
-                setBoardsByWorkspace(allBoards);
-            } catch (error) {
-                console.error("Error fetching boards:", error);
-                toast.error("Failed to load boards");
-            } finally {
-                setLoading(false);
+    // Group boards by workspace - memoized for performance
+    const boardsByWorkspace = useMemo<BoardsByWorkspace[]>(() => {
+        const grouped = new Map<string, BoardsByWorkspace>();
+        
+        for (const board of allBoards) {
+            const existing = grouped.get(board.workspace_id);
+            if (existing) {
+                existing.boards.push(board);
+            } else {
+                grouped.set(board.workspace_id, {
+                    workspaceId: board.workspace_id,
+                    workspaceName: board.workspace_name,
+                    boards: [board],
+                });
             }
         }
+        
+        return Array.from(grouped.values());
+    }, [allBoards]);
 
-        fetchAllBoards();
-    }, [workspaces, loadingWorkspaces]);
-
-    // Filter boards based on search
-    const filteredBoards = searchQuery
-        ? boardsByWorkspace
+    // Filter boards based on search - memoized
+    const filteredBoards = useMemo(() => {
+        if (!searchQuery) return boardsByWorkspace;
+        
+        const query = searchQuery.toLowerCase();
+        return boardsByWorkspace
             .map((ws) => ({
                 ...ws,
                 boards: ws.boards.filter((b) =>
-                    b.name.toLowerCase().includes(searchQuery.toLowerCase())
+                    b.name.toLowerCase().includes(query)
                 ),
             }))
-            .filter((ws) => ws.boards.length > 0)
-        : boardsByWorkspace;
+            .filter((ws) => ws.boards.length > 0);
+    }, [boardsByWorkspace, searchQuery]);
 
-    const totalBoards = boardsByWorkspace.reduce((acc, ws) => acc + ws.boards.length, 0);
+    const totalBoards = allBoards.length;
 
-    if (loading || loadingWorkspaces) {
+    if (loadingWorkspaces || loadingBoards) {
         return <ProjectsPageSkeleton />;
     }
 
@@ -175,8 +167,14 @@ export default function ProjectsPage() {
     );
 }
 
-/* Board Card Component */
-function BoardCard({ board, viewMode }: { board: Board; viewMode: "grid" | "list" }) {
+/* Board Card Component - Memoized */
+const BoardCard = React.memo(function BoardCard({ 
+    board, 
+    viewMode 
+}: { 
+    board: Board; 
+    viewMode: "grid" | "list" 
+}) {
     const backgroundStyle = board.background_image
         ? {
             backgroundImage: `url(${board.background_image})`,
@@ -224,4 +222,4 @@ function BoardCard({ board, viewMode }: { board: Board; viewMode: "grid" | "list
             </div>
         </Link>
     );
-}
+});
