@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
     CheckSquare,
     Square,
@@ -24,7 +24,7 @@ import {
     deleteChecklistItem,
     updateChecklistItem,
 } from "@/lib/actions";
-import type { ChecklistWithItems } from "@/lib/types/database";
+import type { ChecklistWithItems, ChecklistItem } from "@/lib/types/database";
 
 interface ChecklistSectionProps {
     cardId: string;
@@ -33,7 +33,6 @@ interface ChecklistSectionProps {
 export function ChecklistSection({ cardId }: ChecklistSectionProps) {
     const [checklists, setChecklists] = useState<ChecklistWithItems[]>([]);
     const [loading, setLoading] = useState(true);
-    const [addingChecklist, setAddingChecklist] = useState(false);
     const [newItemInputs, setNewItemInputs] = useState<Record<string, string>>({});
     const [collapsedChecklists, setCollapsedChecklists] = useState<Set<string>>(new Set());
     const [editingChecklistId, setEditingChecklistId] = useState<string | null>(null);
@@ -56,160 +55,260 @@ export function ChecklistSection({ cardId }: ChecklistSectionProps) {
         fetchData();
     }, [cardId]);
 
-    // Add a new checklist
-    const handleAddChecklist = async () => {
-        setAddingChecklist(true);
+    // Add a new checklist - OPTIMISTIC
+    const handleAddChecklist = useCallback(async () => {
+        const tempId = `temp-checklist-${Date.now()}`;
+        const tempChecklist: ChecklistWithItems = {
+            id: tempId,
+            card_id: cardId,
+            title: "Checklist",
+            position: checklists.length,
+            created_at: new Date().toISOString(),
+            items: [],
+        };
+
+        // Optimistic update
+        setChecklists(prev => [...prev, tempChecklist]);
+
         try {
             const newChecklist = await createChecklist(cardId);
             if (newChecklist) {
-                setChecklists([...checklists, { ...newChecklist, items: [] }]);
-                toast.success("Checklist added");
+                // Replace temp with real
+                setChecklists(prev =>
+                    prev.map(c => c.id === tempId ? { ...newChecklist, items: [] } : c)
+                );
+            } else {
+                // Rollback on failure
+                setChecklists(prev => prev.filter(c => c.id !== tempId));
+                toast.error("Failed to add checklist");
             }
         } catch (error) {
             console.error("Error adding checklist:", error);
+            // Rollback
+            setChecklists(prev => prev.filter(c => c.id !== tempId));
             toast.error("Failed to add checklist");
-        } finally {
-            setAddingChecklist(false);
         }
-    };
+    }, [cardId, checklists.length]);
 
-    // Delete a checklist
-    const handleDeleteChecklist = async (checklistId: string) => {
+    // Delete a checklist - OPTIMISTIC
+    const handleDeleteChecklist = useCallback(async (checklistId: string) => {
+        const prevChecklists = checklists;
+        
+        // Optimistic update
+        setChecklists(prev => prev.filter(c => c.id !== checklistId));
+
         try {
             const success = await deleteChecklist(checklistId);
-            if (success) {
-                setChecklists(checklists.filter((c) => c.id !== checklistId));
-                toast.success("Checklist deleted");
+            if (!success) {
+                // Rollback
+                setChecklists(prevChecklists);
+                toast.error("Failed to delete checklist");
             }
         } catch (error) {
             console.error("Error deleting checklist:", error);
+            // Rollback
+            setChecklists(prevChecklists);
             toast.error("Failed to delete checklist");
         }
-    };
+    }, [checklists]);
 
-    // Update checklist title
-    const handleUpdateChecklist = async (checklistId: string) => {
+    // Update checklist title - OPTIMISTIC
+    const handleUpdateChecklist = useCallback(async (checklistId: string) => {
         if (!editChecklistTitle.trim()) return;
+        
+        const prevChecklists = checklists;
+        const newTitle = editChecklistTitle.trim();
+        
+        // Optimistic update
+        setChecklists(prev =>
+            prev.map(c => c.id === checklistId ? { ...c, title: newTitle } : c)
+        );
+        setEditingChecklistId(null);
+
         try {
-            const success = await updateChecklist(checklistId, editChecklistTitle.trim());
-            if (success) {
-                setChecklists(
-                    checklists.map((c) =>
-                        c.id === checklistId ? { ...c, title: editChecklistTitle.trim() } : c
-                    )
-                );
-                setEditingChecklistId(null);
-                toast.success("Checklist updated");
+            const success = await updateChecklist(checklistId, newTitle);
+            if (!success) {
+                // Rollback
+                setChecklists(prevChecklists);
+                toast.error("Failed to update checklist");
             }
         } catch (error) {
             console.error("Error updating checklist:", error);
+            // Rollback
+            setChecklists(prevChecklists);
             toast.error("Failed to update checklist");
         }
-    };
+    }, [checklists, editChecklistTitle]);
 
-    // Add an item to a checklist
-    const handleAddItem = async (checklistId: string) => {
+    // Add an item to a checklist - OPTIMISTIC
+    const handleAddItem = useCallback(async (checklistId: string) => {
         const title = newItemInputs[checklistId]?.trim();
         if (!title) return;
+
+        const tempId = `temp-item-${Date.now()}`;
+        const checklist = checklists.find(c => c.id === checklistId);
+        const tempItem: ChecklistItem = {
+            id: tempId,
+            checklist_id: checklistId,
+            title,
+            is_complete: false,
+            position: checklist?.items.length || 0,
+            created_at: new Date().toISOString(),
+        };
+
+        // Optimistic update
+        setChecklists(prev =>
+            prev.map(c =>
+                c.id === checklistId ? { ...c, items: [...c.items, tempItem] } : c
+            )
+        );
+        setNewItemInputs(prev => ({ ...prev, [checklistId]: "" }));
 
         try {
             const newItem = await addChecklistItem(checklistId, title);
             if (newItem) {
-                setChecklists(
-                    checklists.map((c) =>
-                        c.id === checklistId ? { ...c, items: [...c.items, newItem] } : c
-                    )
-                );
-                setNewItemInputs({ ...newItemInputs, [checklistId]: "" });
-            }
-        } catch (error) {
-            console.error("Error adding item:", error);
-            toast.error("Failed to add item");
-        }
-    };
-
-    // Toggle item completion
-    const handleToggleItem = async (checklistId: string, itemId: string, currentState: boolean) => {
-        try {
-            await toggleChecklistItem(itemId, !currentState);
-            setChecklists(
-                checklists.map((c) =>
-                    c.id === checklistId
-                        ? {
-                            ...c,
-                            items: c.items.map((item) =>
-                                item.id === itemId ? { ...item, is_complete: !currentState } : item
-                            ),
-                        }
-                        : c
-                )
-            );
-        } catch (error) {
-            console.error("Error toggling item:", error);
-            toast.error("Failed to update item");
-        }
-    };
-
-    // Delete an item
-    const handleDeleteItem = async (checklistId: string, itemId: string) => {
-        try {
-            await deleteChecklistItem(itemId);
-            setChecklists(
-                checklists.map((c) =>
-                    c.id === checklistId
-                        ? { ...c, items: c.items.filter((item) => item.id !== itemId) }
-                        : c
-                )
-            );
-        } catch (error) {
-            console.error("Error deleting item:", error);
-            toast.error("Failed to delete item");
-        }
-    };
-
-    // Update item title
-    const handleUpdateItem = async (checklistId: string, itemId: string) => {
-        if (!editItemTitle.trim()) return;
-        try {
-            const success = await updateChecklistItem(itemId, editItemTitle.trim());
-            if (success) {
-                setChecklists(
-                    checklists.map((c) =>
+                // Replace temp with real
+                setChecklists(prev =>
+                    prev.map(c =>
                         c.id === checklistId
-                            ? {
-                                ...c,
-                                items: c.items.map((item) =>
-                                    item.id === itemId ? { ...item, title: editItemTitle.trim() } : item
-                                ),
-                            }
+                            ? { ...c, items: c.items.map(item => item.id === tempId ? newItem : item) }
                             : c
                     )
                 );
-                setEditingItemId(null);
+            } else {
+                // Rollback
+                setChecklists(prev =>
+                    prev.map(c =>
+                        c.id === checklistId
+                            ? { ...c, items: c.items.filter(item => item.id !== tempId) }
+                            : c
+                    )
+                );
+                toast.error("Failed to add item");
+            }
+        } catch (error) {
+            console.error("Error adding item:", error);
+            // Rollback
+            setChecklists(prev =>
+                prev.map(c =>
+                    c.id === checklistId
+                        ? { ...c, items: c.items.filter(item => item.id !== tempId) }
+                        : c
+                )
+            );
+            toast.error("Failed to add item");
+        }
+    }, [checklists, newItemInputs]);
+
+    // Toggle item completion - OPTIMISTIC
+    const handleToggleItem = useCallback(async (checklistId: string, itemId: string, currentState: boolean) => {
+        const prevChecklists = checklists;
+        
+        // Optimistic update - toggle immediately
+        setChecklists(prev =>
+            prev.map(c =>
+                c.id === checklistId
+                    ? {
+                        ...c,
+                        items: c.items.map(item =>
+                            item.id === itemId ? { ...item, is_complete: !currentState } : item
+                        ),
+                    }
+                    : c
+            )
+        );
+
+        try {
+            await toggleChecklistItem(itemId, !currentState);
+            // Success - state already updated
+        } catch (error) {
+            console.error("Error toggling item:", error);
+            // Rollback
+            setChecklists(prevChecklists);
+            toast.error("Failed to update item");
+        }
+    }, [checklists]);
+
+    // Delete an item - OPTIMISTIC
+    const handleDeleteItem = useCallback(async (checklistId: string, itemId: string) => {
+        const prevChecklists = checklists;
+        
+        // Optimistic update
+        setChecklists(prev =>
+            prev.map(c =>
+                c.id === checklistId
+                    ? { ...c, items: c.items.filter(item => item.id !== itemId) }
+                    : c
+            )
+        );
+
+        try {
+            await deleteChecklistItem(itemId);
+            // Success - state already updated
+        } catch (error) {
+            console.error("Error deleting item:", error);
+            // Rollback
+            setChecklists(prevChecklists);
+            toast.error("Failed to delete item");
+        }
+    }, [checklists]);
+
+    // Update item title - OPTIMISTIC
+    const handleUpdateItem = useCallback(async (checklistId: string, itemId: string) => {
+        if (!editItemTitle.trim()) return;
+        
+        const prevChecklists = checklists;
+        const newTitle = editItemTitle.trim();
+        
+        // Optimistic update
+        setChecklists(prev =>
+            prev.map(c =>
+                c.id === checklistId
+                    ? {
+                        ...c,
+                        items: c.items.map(item =>
+                            item.id === itemId ? { ...item, title: newTitle } : item
+                        ),
+                    }
+                    : c
+            )
+        );
+        setEditingItemId(null);
+
+        try {
+            const success = await updateChecklistItem(itemId, newTitle);
+            if (!success) {
+                // Rollback
+                setChecklists(prevChecklists);
+                toast.error("Failed to update item");
             }
         } catch (error) {
             console.error("Error updating item:", error);
+            // Rollback
+            setChecklists(prevChecklists);
             toast.error("Failed to update item");
         }
-    };
+    }, [checklists, editItemTitle]);
 
     // Toggle collapse
-    const toggleCollapse = (checklistId: string) => {
-        const newSet = new Set(collapsedChecklists);
-        if (newSet.has(checklistId)) {
-            newSet.delete(checklistId);
-        } else {
-            newSet.add(checklistId);
-        }
-        setCollapsedChecklists(newSet);
-    };
+    const toggleCollapse = useCallback((checklistId: string) => {
+        setCollapsedChecklists(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(checklistId)) {
+                newSet.delete(checklistId);
+            } else {
+                newSet.add(checklistId);
+            }
+            return newSet;
+        });
+    }, []);
 
     // Calculate progress
-    const getProgress = (items: ChecklistWithItems["items"]) => {
+    const getProgress = useCallback((items: ChecklistWithItems["items"]) => {
         if (items.length === 0) return 0;
         const completed = items.filter((i) => i.is_complete).length;
         return Math.round((completed / items.length) * 100);
-    };
+    }, []);
 
     if (loading) {
         return (
@@ -230,14 +329,9 @@ export function ChecklistSection({ cardId }: ChecklistSectionProps) {
                 </h3>
                 <button
                     onClick={handleAddChecklist}
-                    disabled={addingChecklist}
-                    className="flex items-center gap-1 px-2 py-1 text-xs bg-zinc-100 dark:bg-zinc-800 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1 px-2 py-1 text-xs bg-zinc-100 dark:bg-zinc-800 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
                 >
-                    {addingChecklist ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                        <Plus className="w-3 h-3" />
-                    )}
+                    <Plus className="w-3 h-3" />
                     Add
                 </button>
             </div>
@@ -251,11 +345,12 @@ export function ChecklistSection({ cardId }: ChecklistSectionProps) {
                         const progress = getProgress(checklist.items);
                         const isCollapsed = collapsedChecklists.has(checklist.id);
                         const isEditingTitle = editingChecklistId === checklist.id;
+                        const isTemp = checklist.id.startsWith("temp-");
 
                         return (
                             <div
                                 key={checklist.id}
-                                className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg border border-zinc-200 dark:border-zinc-700"
+                                className={`p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg border border-zinc-200 dark:border-zinc-700 ${isTemp ? "opacity-70" : ""}`}
                             >
                                 {/* Checklist Header */}
                                 <div className="flex items-center justify-between mb-2">
@@ -302,7 +397,7 @@ export function ChecklistSection({ cardId }: ChecklistSectionProps) {
                                             </span>
                                         </button>
                                     )}
-                                    {!isEditingTitle && (
+                                    {!isEditingTitle && !isTemp && (
                                         <div className="flex items-center gap-1">
                                             <button
                                                 onClick={() => {
@@ -337,11 +432,12 @@ export function ChecklistSection({ cardId }: ChecklistSectionProps) {
                                         <div className="space-y-1.5">
                                             {checklist.items.map((item) => {
                                                 const isEditingItem = editingItemId === item.id;
+                                                const isTempItem = item.id.startsWith("temp-");
 
                                                 return (
                                                     <div
                                                         key={item.id}
-                                                        className="flex items-center gap-2 group"
+                                                        className={`flex items-center gap-2 group ${isTempItem ? "opacity-70" : ""}`}
                                                     >
                                                         <button
                                                             onClick={() =>
@@ -352,6 +448,7 @@ export function ChecklistSection({ cardId }: ChecklistSectionProps) {
                                                                 )
                                                             }
                                                             className="shrink-0"
+                                                            disabled={isTempItem}
                                                         >
                                                             {item.is_complete ? (
                                                                 <CheckSquare className="w-4 h-4 text-emerald-500" />
@@ -393,29 +490,35 @@ export function ChecklistSection({ cardId }: ChecklistSectionProps) {
                                                                         : "text-zinc-700 dark:text-zinc-300"
                                                                         }`}
                                                                     onDoubleClick={() => {
-                                                                        setEditingItemId(item.id);
-                                                                        setEditItemTitle(item.title);
+                                                                        if (!isTempItem) {
+                                                                            setEditingItemId(item.id);
+                                                                            setEditItemTitle(item.title);
+                                                                        }
                                                                     }}
                                                                 >
                                                                     {item.title}
                                                                 </span>
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setEditingItemId(item.id);
-                                                                        setEditItemTitle(item.title);
-                                                                    }}
-                                                                    className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-blue-500 transition-all"
-                                                                >
-                                                                    <Pencil className="w-3 h-3" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() =>
-                                                                        handleDeleteItem(checklist.id, item.id)
-                                                                    }
-                                                                    className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 transition-all"
-                                                                >
-                                                                    <Trash2 className="w-3 h-3" />
-                                                                </button>
+                                                                {!isTempItem && (
+                                                                    <>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setEditingItemId(item.id);
+                                                                                setEditItemTitle(item.title);
+                                                                            }}
+                                                                            className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-blue-500 transition-all"
+                                                                        >
+                                                                            <Pencil className="w-3 h-3" />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() =>
+                                                                                handleDeleteItem(checklist.id, item.id)
+                                                                            }
+                                                                            className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 transition-all"
+                                                                        >
+                                                                            <Trash2 className="w-3 h-3" />
+                                                                        </button>
+                                                                    </>
+                                                                )}
                                                             </>
                                                         )}
                                                     </div>
@@ -424,31 +527,33 @@ export function ChecklistSection({ cardId }: ChecklistSectionProps) {
                                         </div>
 
                                         {/* Add Item Input */}
-                                        <div className="mt-2 flex items-center gap-2">
-                                            <input
-                                                type="text"
-                                                value={newItemInputs[checklist.id] || ""}
-                                                onChange={(e) =>
-                                                    setNewItemInputs({
-                                                        ...newItemInputs,
-                                                        [checklist.id]: e.target.value,
-                                                    })
-                                                }
-                                                onKeyDown={(e) => {
-                                                    if (e.key === "Enter") {
-                                                        handleAddItem(checklist.id);
+                                        {!isTemp && (
+                                            <div className="mt-2 flex items-center gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={newItemInputs[checklist.id] || ""}
+                                                    onChange={(e) =>
+                                                        setNewItemInputs({
+                                                            ...newItemInputs,
+                                                            [checklist.id]: e.target.value,
+                                                        })
                                                     }
-                                                }}
-                                                placeholder="Add an item..."
-                                                className="flex-1 px-2 py-1 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded focus:outline-none focus:ring-1 focus:ring-zinc-400"
-                                            />
-                                            <button
-                                                onClick={() => handleAddItem(checklist.id)}
-                                                className="px-2 py-1 text-xs bg-zinc-200 dark:bg-zinc-700 rounded hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
-                                            >
-                                                Add
-                                            </button>
-                                        </div>
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter") {
+                                                            handleAddItem(checklist.id);
+                                                        }
+                                                    }}
+                                                    placeholder="Add an item..."
+                                                    className="flex-1 px-2 py-1 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                                                />
+                                                <button
+                                                    onClick={() => handleAddItem(checklist.id)}
+                                                    className="px-2 py-1 text-xs bg-zinc-200 dark:bg-zinc-700 rounded hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
+                                                >
+                                                    Add
+                                                </button>
+                                            </div>
+                                        )}
                                     </>
                                 )}
                             </div>
