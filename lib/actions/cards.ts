@@ -159,6 +159,13 @@ export async function updateCard(
 
   const supabase = await createClient();
 
+  // Get original card for activity logging
+  const { data: originalCard } = await supabase
+    .from("cards")
+    .select("*")
+    .eq("id", cardId)
+    .single();
+
   // If moving to a different list, verify access to the target list
   if (input.list_id) {
     const targetListAccess = await verifyListAccess(input.list_id);
@@ -188,6 +195,38 @@ export async function updateCard(
   if (error) {
     console.error("Error updating card:", error);
     return null;
+  }
+
+  // Log activity for specific changes
+  if (access.boardId && originalCard) {
+    const changes: string[] = [];
+    
+    if (input.title !== undefined && input.title !== originalCard.title) {
+      changes.push("title");
+    }
+    if (input.description !== undefined && input.description !== originalCard.description) {
+      changes.push("description");
+    }
+    if (input.due_date !== undefined && input.due_date !== originalCard.due_date) {
+      changes.push("due date");
+    }
+    if (input.is_complete !== undefined && input.is_complete !== originalCard.is_complete) {
+      await supabase.from("activity_log").insert({
+        card_id: cardId,
+        board_id: access.boardId,
+        user_id: user.id,
+        action: input.is_complete ? "completed" : "uncompleted",
+        details: { title: card.title },
+      });
+    } else if (changes.length > 0) {
+      await supabase.from("activity_log").insert({
+        card_id: cardId,
+        board_id: access.boardId,
+        user_id: user.id,
+        action: "updated",
+        details: { changes, title: card.title },
+      });
+    }
   }
 
   return card;
@@ -286,6 +325,30 @@ export async function moveCard(
         to: newList.name,
       },
     });
+
+    // Notify card assignees about the move (except the mover)
+    const { data: assignees } = await supabase
+      .from("card_assignees")
+      .select("user_id")
+      .eq("card_id", cardId);
+
+    if (assignees && assignees.length > 0) {
+      const usersToNotify = assignees
+        .map((a) => a.user_id)
+        .filter((id) => id !== user.id);
+
+      if (usersToNotify.length > 0) {
+        const notifications = usersToNotify.map((userId) => ({
+          user_id: userId,
+          type: "card_moved",
+          title: "Card moved",
+          message: `"${originalCard?.title}" was moved from "${originalCard?.lists?.name}" to "${newList.name}"`,
+          link: `/dashboard/board/${newList.board_id}?card=${cardId}`,
+        }));
+
+        await supabase.from("notifications").insert(notifications);
+      }
+    }
   }
 
   return true;
@@ -331,6 +394,12 @@ export async function addLabelToCard(
   cardId: string,
   labelId: string
 ): Promise<boolean> {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    return false;
+  }
+
   // Verify user has access to this card
   const access = await verifyCardAccess(cardId);
   if (!access.allowed) {
@@ -347,6 +416,29 @@ export async function addLabelToCard(
   if (error) {
     console.error("Error adding label:", error);
     return false;
+  }
+
+  // Log activity
+  if (access.boardId) {
+    const { data: label } = await supabase
+      .from("labels")
+      .select("name, color")
+      .eq("id", labelId)
+      .single();
+
+    const { data: card } = await supabase
+      .from("cards")
+      .select("title")
+      .eq("id", cardId)
+      .single();
+
+    await supabase.from("activity_log").insert({
+      card_id: cardId,
+      board_id: access.boardId,
+      user_id: user.id,
+      action: "label_added",
+      details: { label: label?.name || "Unknown", cardTitle: card?.title },
+    });
   }
 
   return true;
@@ -389,6 +481,12 @@ export async function assignUserToCard(
   cardId: string,
   userId: string
 ): Promise<boolean> {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    return false;
+  }
+
   // Verify user has access to this card
   const access = await verifyCardAccess(cardId);
   if (!access.allowed) {
@@ -407,23 +505,42 @@ export async function assignUserToCard(
     return false;
   }
 
-  // Create notification for the assigned user
-  if (access.userId && access.userId !== userId) {
-    const { data: card } = await supabase
-      .from("cards")
-      .select("title")
-      .eq("id", cardId)
-      .single();
+  // Get user and card info for logging/notification
+  const { data: assignedUser } = await supabase
+    .from("users")
+    .select("name")
+    .eq("id", userId)
+    .single();
 
-    if (card) {
-      await supabase.from("notifications").insert({
-        user_id: userId,
-        type: "card_assigned",
-        title: "You were assigned to a card",
-        message: `You were assigned to "${card.title}"`,
-        link: `/dashboard/board/${access.boardId}?card=${cardId}`,
-      });
-    }
+  const { data: card } = await supabase
+    .from("cards")
+    .select("title")
+    .eq("id", cardId)
+    .single();
+
+  // Log activity
+  if (access.boardId) {
+    await supabase.from("activity_log").insert({
+      card_id: cardId,
+      board_id: access.boardId,
+      user_id: user.id,
+      action: "assigned",
+      details: { 
+        assignee: assignedUser?.name || "Unknown",
+        cardTitle: card?.title 
+      },
+    });
+  }
+
+  // Create notification for the assigned user (if not self-assigning)
+  if (access.userId && access.userId !== userId && card) {
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      type: "card_assigned",
+      title: "You were assigned to a card",
+      message: `${user.name || "Someone"} assigned you to "${card.title}"`,
+      link: `/dashboard/board/${access.boardId}?card=${cardId}`,
+    });
   }
 
   return true;
@@ -502,6 +619,36 @@ export async function addComment(input: CreateCommentInput): Promise<Comment | n
       action: "commented",
       details: { preview: input.content.slice(0, 50) },
     });
+  }
+
+  // Notify card assignees about the comment (except the commenter)
+  const { data: assignees } = await supabase
+    .from("card_assignees")
+    .select("user_id")
+    .eq("card_id", input.card_id);
+
+  if (assignees && assignees.length > 0) {
+    const { data: card } = await supabase
+      .from("cards")
+      .select("title")
+      .eq("id", input.card_id)
+      .single();
+
+    const usersToNotify = assignees
+      .map((a) => a.user_id)
+      .filter((id) => id !== user.id);
+
+    if (usersToNotify.length > 0 && card) {
+      const notifications = usersToNotify.map((userId) => ({
+        user_id: userId,
+        type: "comment_added",
+        title: "New comment on your card",
+        message: `${user.name || "Someone"} commented on "${card.title}": "${input.content.slice(0, 50)}${input.content.length > 50 ? "..." : ""}"`,
+        link: `/dashboard/board/${access.boardId}?card=${input.card_id}`,
+      }));
+
+      await supabase.from("notifications").insert(notifications);
+    }
   }
 
   return comment;

@@ -181,6 +181,63 @@ CREATE INDEX IF NOT EXISTS idx_activity_card ON activity_log(card_id);
 CREATE INDEX IF NOT EXISTS idx_activity_board ON activity_log(board_id);
 
 -- =====================================================
+-- NOTIFICATIONS TABLE
+-- =====================================================
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('card_assigned', 'comment_added', 'due_soon', 'due_overdue', 'workspace_invite', 'mentioned', 'card_moved')),
+  title TEXT NOT NULL,
+  message TEXT,
+  link TEXT,
+  is_read BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for notifications
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read) WHERE is_read = false;
+
+-- =====================================================
+-- NOTIFICATION PREFERENCES TABLE
+-- =====================================================
+CREATE TABLE IF NOT EXISTS notification_preferences (
+  user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  email_enabled BOOLEAN DEFAULT true,
+  card_assigned BOOLEAN DEFAULT true,
+  comments BOOLEAN DEFAULT true,
+  due_reminders BOOLEAN DEFAULT true,
+  workspace_invites BOOLEAN DEFAULT true
+);
+
+-- =====================================================
+-- CHECKLISTS TABLE
+-- =====================================================
+CREATE TABLE IF NOT EXISTS checklists (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  card_id UUID NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+  title TEXT NOT NULL DEFAULT 'Checklist',
+  position INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_checklists_card ON checklists(card_id);
+
+-- =====================================================
+-- CHECKLIST ITEMS TABLE
+-- =====================================================
+CREATE TABLE IF NOT EXISTS checklist_items (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  checklist_id UUID NOT NULL REFERENCES checklists(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  is_complete BOOLEAN DEFAULT false,
+  position INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_checklist_items_checklist ON checklist_items(checklist_id);
+
+-- =====================================================
 -- ROW LEVEL SECURITY (RLS)
 -- =====================================================
 
@@ -197,6 +254,10 @@ ALTER TABLE card_assignees ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attachments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE checklists ENABLE ROW LEVEL SECURITY;
+ALTER TABLE checklist_items ENABLE ROW LEVEL SECURITY;
 
 -- Note: RLS policies will need to be created based on your auth setup
 -- Since you're using Clerk (not Supabase Auth), you'll need to pass
@@ -222,3 +283,34 @@ CREATE TRIGGER update_boards_updated_at BEFORE UPDATE ON boards FOR EACH ROW EXE
 CREATE TRIGGER update_lists_updated_at BEFORE UPDATE ON lists FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_cards_updated_at BEFORE UPDATE ON cards FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_comments_updated_at BEFORE UPDATE ON comments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- STORAGE BUCKET FOR ATTACHMENTS
+-- =====================================================
+-- Run this in the Supabase SQL Editor to create the storage bucket:
+-- 
+-- INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+-- VALUES (
+--   'attachments',
+--   'attachments', 
+--   true,
+--   10485760, -- 10MB
+--   ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 
+--         'application/pdf', 'application/msword', 
+--         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+--         'application/vnd.ms-excel', 
+--         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+--         'text/plain', 'text/csv', 'application/json', 'application/zip']
+-- );
+--
+-- -- Allow public read access to attachments
+-- CREATE POLICY "Public Access" ON storage.objects 
+-- FOR SELECT USING (bucket_id = 'attachments');
+--
+-- -- Allow authenticated uploads (via service role)
+-- CREATE POLICY "Service Role Upload" ON storage.objects 
+-- FOR INSERT WITH CHECK (bucket_id = 'attachments');
+--
+-- CREATE POLICY "Service Role Delete" ON storage.objects 
+-- FOR DELETE USING (bucket_id = 'attachments');
+

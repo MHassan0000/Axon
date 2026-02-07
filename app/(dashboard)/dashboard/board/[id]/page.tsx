@@ -24,6 +24,8 @@ import {
     MessageSquare,
     Paperclip,
     CheckCircle2,
+    CheckSquare,
+    Square,
     Users,
     Tag,
     Settings,
@@ -50,9 +52,11 @@ import {
     createLabel,
     deleteLabel,
     uploadPreparedAttachment,
+    updateCard,
 } from "@/lib/actions";
 import { useBoardRealtime } from "@/lib/hooks/useRealtime";
 import { CardModal } from "@/components/dashboard-components/CardModal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type {
     BoardWithLists,
     ListWithCards,
@@ -87,6 +91,13 @@ export default function BoardPage() {
     const [selectedCard, setSelectedCard] = useState<CardWithRelations | null>(null);
     const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
     const [showBoardSettings, setShowBoardSettings] = useState(false);
+
+    // Confirmation dialog state
+    const [deleteListConfirm, setDeleteListConfirm] = useState<{ isOpen: boolean; listId: string | null; listName: string }>({
+        isOpen: false,
+        listId: null,
+        listName: "",
+    });
 
     // Fetch board data
     useEffect(() => {
@@ -531,13 +542,23 @@ export default function BoardPage() {
         }
     };
 
-    // Delete List Handler
-    const handleDeleteList = async (listId: string) => {
+    // Delete List Handler - show confirmation dialog
+    const handleDeleteList = (listId: string) => {
         if (!board) return;
+        const list = board.lists.find(l => l.id === listId);
+        setDeleteListConfirm({
+            isOpen: true,
+            listId,
+            listName: list?.name || "this list",
+        });
+    };
 
-        if (!window.confirm("Are you sure you want to delete this list and all its cards?")) {
-            return;
-        }
+    // Confirmed delete list
+    const confirmDeleteList = async () => {
+        if (!board || !deleteListConfirm.listId) return;
+
+        const listId = deleteListConfirm.listId;
+        setDeleteListConfirm({ isOpen: false, listId: null, listName: "" });
 
         try {
             // Optimistic update
@@ -554,6 +575,52 @@ export default function BoardPage() {
             // Refetch on error
             const b = await getBoardWithLists(boardId);
             setBoard(b);
+        }
+    };
+
+    // Toggle Card Complete Handler - Instant optimistic update
+    const handleToggleComplete = async (card: CardWithRelations) => {
+        if (!board) return;
+
+        // Don't allow toggling on temp cards
+        if (card.id.startsWith("temp-")) return;
+
+        const newIsComplete = !card.is_complete;
+
+        // Optimistic update
+        setBoard({
+            ...board,
+            lists: board.lists.map((list) => ({
+                ...list,
+                cards: list.cards.map((c) =>
+                    c.id === card.id ? { ...c, is_complete: newIsComplete } : c
+                ),
+            })),
+        });
+
+        // Update selected card if it's the one being toggled
+        if (selectedCard?.id === card.id) {
+            setSelectedCard({ ...selectedCard, is_complete: newIsComplete });
+        }
+
+        try {
+            await updateCard(card.id, { is_complete: newIsComplete });
+        } catch (error) {
+            console.error("Error toggling card complete:", error);
+            toast.error("Failed to update card");
+            // Rollback on error
+            setBoard({
+                ...board,
+                lists: board.lists.map((list) => ({
+                    ...list,
+                    cards: list.cards.map((c) =>
+                        c.id === card.id ? { ...c, is_complete: card.is_complete } : c
+                    ),
+                })),
+            });
+            if (selectedCard?.id === card.id) {
+                setSelectedCard({ ...selectedCard, is_complete: card.is_complete });
+            }
         }
     };
 
@@ -660,6 +727,7 @@ export default function BoardPage() {
                                                         }}
                                                         onCardClick={setSelectedCard}
                                                         onDeleteList={() => handleDeleteList(list.id)}
+                                                        onToggleComplete={handleToggleComplete}
                                                         onRenameList={async (newName) => {
                                                             try {
                                                                 await updateList(list.id, { name: newName });
@@ -783,6 +851,19 @@ export default function BoardPage() {
                     }}
                 />
             )}
+
+            {/* Delete List Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={deleteListConfirm.isOpen}
+                onClose={() => setDeleteListConfirm({ isOpen: false, listId: null, listName: "" })}
+                onConfirm={confirmDeleteList}
+                title="Delete List"
+                message={`Are you sure you want to delete "${deleteListConfirm.listName}" and all its cards? This action cannot be undone.`}
+                confirmText="Delete List"
+                cancelText="Cancel"
+                variant="danger"
+                icon="trash"
+            />
         </div>
     );
 }
@@ -806,6 +887,7 @@ interface ListColumnProps {
     onDeleteList: () => void;
     onRenameList: (newName: string) => void;
     onCopyList: () => void;
+    onToggleComplete: (card: CardWithRelations) => void;
 }
 
 function ListColumn({
@@ -823,6 +905,7 @@ function ListColumn({
     onDeleteList,
     onRenameList,
     onCopyList,
+    onToggleComplete,
 }: ListColumnProps) {
     const [showMenu, setShowMenu] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -961,6 +1044,7 @@ function ListColumn({
                                                 <CardItem
                                                     card={card}
                                                     onClick={() => onCardClick(card)}
+                                                    onToggleComplete={() => onToggleComplete(card)}
                                                 />
                                             </div>
                                         )}
@@ -1002,11 +1086,21 @@ function ListColumn({
    Card Item Component
    ===================================================== */
 
-function CardItem({ card, onClick }: { card: CardWithRelations; onClick: () => void }) {
+function CardItem({ 
+    card, 
+    onClick, 
+    onToggleComplete 
+}: { 
+    card: CardWithRelations; 
+    onClick: () => void;
+    onToggleComplete: () => void;
+}) {
     return (
         <div
             onClick={onClick}
-            className="group bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-3 hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-md cursor-pointer transition-all"
+            className={`group bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-3 hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-md cursor-pointer transition-all ${
+                card.is_complete ? "opacity-75" : ""
+            }`}
         >
             {/* Labels */}
             {card.labels && card.labels.length > 0 && (
@@ -1023,10 +1117,32 @@ function CardItem({ card, onClick }: { card: CardWithRelations; onClick: () => v
                 </div>
             )}
 
-            {/* Title */}
-            <p className="text-sm text-zinc-900 dark:text-zinc-100 mb-2">
-                {card.title}
-            </p>
+            {/* Title with Checkbox */}
+            <div className="flex items-start gap-2 mb-2">
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleComplete();
+                    }}
+                    className={`shrink-0 mt-0.5 p-0.5 rounded transition-colors ${
+                        card.is_complete
+                            ? "text-green-500 hover:text-green-600"
+                            : "text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+                    }`}
+                    title={card.is_complete ? "Mark incomplete" : "Mark complete"}
+                >
+                    {card.is_complete ? (
+                        <CheckSquare className="w-4 h-4" />
+                    ) : (
+                        <Square className="w-4 h-4" />
+                    )}
+                </button>
+                <p className={`text-sm text-zinc-900 dark:text-zinc-100 ${
+                    card.is_complete ? "line-through text-zinc-500 dark:text-zinc-400" : ""
+                }`}>
+                    {card.title}
+                </p>
+            </div>
 
             {/* Meta info */}
             <div className="flex items-center gap-3 text-zinc-400 dark:text-zinc-500">
@@ -1099,7 +1215,7 @@ function CardItem({ card, onClick }: { card: CardWithRelations; onClick: () => v
    Add Card Form Component with File Upload
    ===================================================== */
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB limit for server actions
 const ALLOWED_TYPES = [
     "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml",
     "application/pdf", "application/msword",
@@ -1137,7 +1253,7 @@ function AddCardForm({
 
         Array.from(files).forEach((file) => {
             if (file.size > MAX_FILE_SIZE) {
-                errors.push(`${file.name} is too large (max 10MB)`);
+                errors.push(`${file.name} exceeds 1MB limit. Please use a smaller file.`);
                 return;
             }
             if (!ALLOWED_TYPES.includes(file.type)) {

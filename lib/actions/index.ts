@@ -111,3 +111,17 @@ export {
   prepareAttachment,
   uploadPreparedAttachment,
 } from "./attachments";
+
+// Notification actions
+export {
+  createNotification,
+  getNotifications,
+  getUnreadCount,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification,
+  clearAllNotifications,
+  notifyUsers,
+} from "./notifications";
+
+export type { NotificationType } from "./notifications";

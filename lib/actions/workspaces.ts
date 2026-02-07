@@ -276,6 +276,23 @@ export async function addWorkspaceMember(
     return null;
   }
 
+  // Send notification to the new member
+  const { data: workspace } = await supabase
+    .from("workspaces")
+    .select("name")
+    .eq("id", workspaceId)
+    .single();
+
+  if (workspace) {
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      type: "workspace_invite",
+      title: "You were added to a workspace",
+      message: `${user.name || "Someone"} added you to the workspace "${workspace.name}"`,
+      link: `/dashboard?workspace=${workspaceId}`,
+    });
+  }
+
   return newMember;
 }
 

@@ -10,6 +10,10 @@ import {
     MessageCircle,
     Users,
     Layers,
+    Paperclip,
+    Tag,
+    Edit3,
+    XCircle,
 } from "lucide-react";
 import { getRecentActivity } from "@/lib/actions";
 import type { ActivityLog } from "@/lib/types/database";
@@ -26,12 +30,80 @@ const getActionIcon = (action: string) => {
             return <MoveRight className="w-4 h-4 text-blue-500" />;
         case "completed":
             return <CheckCircle className="w-4 h-4 text-green-500" />;
+        case "uncompleted":
+            return <XCircle className="w-4 h-4 text-yellow-500" />;
         case "commented":
             return <MessageCircle className="w-4 h-4 text-purple-500" />;
         case "assigned":
             return <Users className="w-4 h-4 text-orange-500" />;
+        case "attachment_added":
+            return <Paperclip className="w-4 h-4 text-amber-500" />;
+        case "label_added":
+            return <Tag className="w-4 h-4 text-pink-500" />;
+        case "updated":
+            return <Edit3 className="w-4 h-4 text-cyan-500" />;
         default:
             return <Activity className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />;
+    }
+};
+
+const formatActionText = (action: string): string => {
+    switch (action) {
+        case "created":
+            return "created a card";
+        case "moved":
+            return "moved a card";
+        case "completed":
+            return "completed a card";
+        case "uncompleted":
+            return "marked a card incomplete";
+        case "commented":
+            return "commented on";
+        case "assigned":
+            return "assigned someone to";
+        case "attachment_added":
+            return "added an attachment to";
+        case "label_added":
+            return "added a label to";
+        case "updated":
+            return "updated";
+        default:
+            return action;
+    }
+};
+
+const formatDetails = (action: string, details: Record<string, unknown> | null): string => {
+    if (!details) return "";
+    
+    switch (action) {
+        case "created":
+            return details.title ? `"${details.title}"` : "";
+        case "moved":
+            return details.from && details.to 
+                ? `from "${details.from}" to "${details.to}"`
+                : "";
+        case "completed":
+        case "uncompleted":
+            return details.title ? `"${details.title}"` : "";
+        case "commented":
+            return details.preview ? `"${details.preview}..."` : "";
+        case "assigned":
+            return details.assignee && details.cardTitle
+                ? `${details.assignee} to "${details.cardTitle}"`
+                : "";
+        case "attachment_added":
+            return details.name ? `"${details.name}"` : "";
+        case "label_added":
+            return details.label && details.cardTitle
+                ? `"${details.label}" to "${details.cardTitle}"`
+                : "";
+        case "updated":
+            if (details.changes && Array.isArray(details.changes)) {
+                return `${details.changes.join(", ")} on "${details.title || "a card"}"`;
+            }
+            return details.title ? `"${details.title}"` : "";
+        default:
+            return JSON.stringify(details).slice(0, 100);
     }
 };
 
@@ -130,20 +202,18 @@ export default function MessagesPage() {
 
                                 {/* Activity Content */}
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
+                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                                         {getActionIcon(activity.action)}
                                         <span className="font-medium text-zinc-900 dark:text-zinc-100">
                                             {activity.user?.name || "Unknown"}
                                         </span>
                                         <span className="text-zinc-700 dark:text-zinc-400">
-                                            {activity.action}
+                                            {formatActionText(activity.action)}
                                         </span>
                                     </div>
                                     {activity.details && (
-                                        <p className="text-sm text-zinc-600 dark:text-zinc-400 truncate">
-                                            {typeof activity.details === "object"
-                                                ? JSON.stringify(activity.details).slice(0, 100)
-                                                : String(activity.details)}
+                                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                            {formatDetails(activity.action, activity.details as Record<string, unknown>)}
                                         </p>
                                     )}
                                     <div className="flex items-center gap-1 mt-2 text-xs text-zinc-600 dark:text-zinc-400">

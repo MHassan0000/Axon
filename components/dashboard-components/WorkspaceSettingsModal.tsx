@@ -25,6 +25,7 @@ import {
     searchUsers,
 } from "@/lib/actions";
 import { workspaceNameSchema, workspaceDescriptionSchema } from "@/lib/validations";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Workspace } from "@/lib/types/database";
 
 /* =====================================================
@@ -75,6 +76,13 @@ export function WorkspaceSettingsModal({
     // Delete state
     const [deleteConfirm, setDeleteConfirm] = useState("");
     const [deleting, setDeleting] = useState(false);
+
+    // Member removal confirmation state
+    const [removeMemberConfirm, setRemoveMemberConfirm] = useState<{
+        isOpen: boolean;
+        userId: string | null;
+        userName: string | null;
+    }>({ isOpen: false, userId: null, userName: null });
 
     // Load members on mount
     useEffect(() => {
@@ -156,11 +164,17 @@ export function WorkspaceSettingsModal({
         }
     };
 
-    // Remove member
-    const handleRemoveMember = async (userId: string, userName: string | null) => {
-        if (!window.confirm(`Remove ${userName || "this member"} from the workspace?`)) {
-            return;
-        }
+    // Remove member - show confirmation dialog
+    const handleRemoveMember = (userId: string, userName: string | null) => {
+        setRemoveMemberConfirm({ isOpen: true, userId, userName });
+    };
+
+    // Confirmed remove member
+    const confirmRemoveMember = async () => {
+        if (!removeMemberConfirm.userId) return;
+
+        const userId = removeMemberConfirm.userId;
+        setRemoveMemberConfirm({ isOpen: false, userId: null, userName: null });
 
         try {
             await removeWorkspaceMember(workspace.id, userId);
@@ -458,6 +472,19 @@ export function WorkspaceSettingsModal({
                     )}
                 </div>
             </div>
+
+            {/* Remove Member Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={removeMemberConfirm.isOpen}
+                onClose={() => setRemoveMemberConfirm({ isOpen: false, userId: null, userName: null })}
+                onConfirm={confirmRemoveMember}
+                title="Remove Member"
+                message={`Are you sure you want to remove ${removeMemberConfirm.userName || "this member"} from the workspace?`}
+                confirmText="Remove"
+                cancelText="Cancel"
+                variant="danger"
+                icon="user-remove"
+            />
         </div>
     );
 }

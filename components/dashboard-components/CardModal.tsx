@@ -15,6 +15,12 @@ import {
     Send,
     Clock,
     ListChecks,
+    Paperclip,
+    Download,
+    ExternalLink,
+    File,
+    Image as ImageIcon,
+    Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -26,12 +32,17 @@ import {
     removeLabelFromCard,
     assignUserToCard,
     unassignUserFromCard,
+    getAttachments,
+    uploadAttachment,
+    deleteAttachment,
 } from "@/lib/actions";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type {
     CardWithRelations,
     Label,
     User,
     Comment,
+    Attachment,
 } from "@/lib/types/database";
 import { ChecklistSection } from "./ChecklistSection";
 
@@ -83,6 +94,18 @@ export function CardModal({
     const [newComment, setNewComment] = useState("");
     const [submittingComment, setSubmittingComment] = useState(false);
 
+    // Attachments state
+    const [attachments, setAttachments] = useState<Attachment[]>([]);
+    const [loadingAttachments, setLoadingAttachments] = useState(true);
+    const [uploadingFile, setUploadingFile] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Loading states for actions (for visual feedback)
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+    // Delete confirmation state
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
     // Refs for click outside
     const labelPickerRef = useRef<HTMLDivElement>(null);
     const assigneePickerRef = useRef<HTMLDivElement>(null);
@@ -102,150 +125,255 @@ export function CardModal({
         fetchComments();
     }, [card.id]);
 
+    // Fetch attachments
+    useEffect(() => {
+        async function fetchAttachments() {
+            try {
+                const a = await getAttachments(card.id);
+                setAttachments(a);
+            } catch (error) {
+                console.error("Error fetching attachments:", error);
+            } finally {
+                setLoadingAttachments(false);
+            }
+        }
+        fetchAttachments();
+    }, [card.id]);
+
     // Handle save
     const handleSave = async () => {
         setSaving(true);
+        // Optimistic update
+        const prevCard = { ...card };
+        onUpdate({ ...card, title, description });
+
         try {
             await updateCard(card.id, { title, description });
-            onUpdate({ ...card, title, description });
             setEditing(false);
-            toast.success("Card updated");
         } catch (error) {
             console.error("Error updating card:", error);
+            onUpdate(prevCard); // Rollback
             toast.error("Failed to update card");
         } finally {
             setSaving(false);
         }
     };
 
-    // Toggle complete
-    const handleToggleComplete = async () => {
-        try {
-            await updateCard(card.id, { is_complete: !card.is_complete });
-            onUpdate({ ...card, is_complete: !card.is_complete });
-            toast.success(card.is_complete ? "Marked incomplete" : "Marked complete");
-        } catch (error) {
-            console.error("Error updating card:", error);
-            toast.error("Failed to update card");
-        }
-    };
-
-    // Due date
+    // Due date - with optimistic update
     const handleSaveDueDate = async () => {
+        setActionLoading("dueDate");
+        const prevDueDate = card.due_date;
+        const newDueDate = dueDate || null;
+
+        // Optimistic update
+        onUpdate({ ...card, due_date: newDueDate });
+        setShowDueDatePicker(false);
+
         try {
-            const newDueDate = dueDate || null;
             await updateCard(card.id, { due_date: newDueDate });
-            onUpdate({ ...card, due_date: newDueDate });
-            setShowDueDatePicker(false);
-            toast.success(newDueDate ? "Due date set" : "Due date removed");
         } catch (error) {
             console.error("Error updating due date:", error);
+            onUpdate({ ...card, due_date: prevDueDate }); // Rollback
             toast.error("Failed to update due date");
+        } finally {
+            setActionLoading(null);
         }
     };
 
-    // Add comment
+    // Add comment - with optimistic update
     const handleAddComment = async () => {
         if (!newComment.trim()) return;
 
+        const tempComment: CommentWithUser = {
+            id: `temp-${Date.now()}`,
+            card_id: card.id,
+            user_id: "temp",
+            content: newComment,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            user: { name: "You", avatar_url: "" },
+        };
+
+        // Optimistic update
+        setComments([...comments, tempComment]);
+        const commentContent = newComment;
+        setNewComment("");
         setSubmittingComment(true);
+
         try {
-            const comment = await addComment({ card_id: card.id, content: newComment });
+            const comment = await addComment({ card_id: card.id, content: commentContent });
             if (comment) {
-                // Refresh comments
+                // Refresh comments to get full user data
                 const c = await getComments(card.id);
                 setComments(c as CommentWithUser[]);
-                setNewComment("");
-                toast.success("Comment added");
             }
         } catch (error) {
             console.error("Error adding comment:", error);
+            // Remove temp comment
+            setComments(comments.filter(c => c.id !== tempComment.id));
+            setNewComment(commentContent);
             toast.error("Failed to add comment");
         } finally {
             setSubmittingComment(false);
         }
     };
 
-    // Delete comment
+    // Delete comment - with optimistic update
     const handleDeleteComment = async (commentId: string) => {
+        const prevComments = [...comments];
+        // Optimistic update
+        setComments(comments.filter(c => c.id !== commentId));
+
         try {
             await deleteComment(commentId);
-            setComments(comments.filter(c => c.id !== commentId));
-            toast.success("Comment deleted");
         } catch (error) {
             console.error("Error deleting comment:", error);
+            setComments(prevComments); // Rollback
             toast.error("Failed to delete comment");
         }
     };
 
-    // Toggle label
+    // Toggle label - with optimistic update
     const handleToggleLabel = async (label: Label) => {
         const hasLabel = card.labels?.some(l => l.id === label.id);
+        setActionLoading(`label-${label.id}`);
+
+        // Optimistic update
+        const newLabels = hasLabel
+            ? card.labels?.filter(l => l.id !== label.id) || []
+            : [...(card.labels || []), label];
+        onUpdate({ ...card, labels: newLabels });
 
         try {
             if (hasLabel) {
                 await removeLabelFromCard(card.id, label.id);
-                onUpdate({
-                    ...card,
-                    labels: card.labels?.filter(l => l.id !== label.id) || [],
-                });
-                toast.success(`Removed "${label.name}" label`);
             } else {
                 await addLabelToCard(card.id, label.id);
-                onUpdate({
-                    ...card,
-                    labels: [...(card.labels || []), label],
-                });
-                toast.success(`Added "${label.name}" label`);
             }
         } catch (error) {
             console.error("Error toggling label:", error);
+            // Rollback
+            onUpdate({ ...card, labels: hasLabel ? [...(card.labels || []), label] : card.labels?.filter(l => l.id !== label.id) || [] });
             toast.error("Failed to update label");
+        } finally {
+            setActionLoading(null);
         }
     };
 
-    // Toggle assignee
+    // Toggle assignee - with optimistic update
     const handleToggleAssignee = async (user: WorkspaceMember) => {
         const isAssigned = card.assignees?.some(a => a.id === user.id);
+        setActionLoading(`assignee-${user.id}`);
+
+        // Create a User-compatible object from WorkspaceMember
+        const userAsAssignee = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            avatar_url: user.avatar_url,
+            clerk_id: "",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        } as User;
+
+        // Optimistic update
+        const newAssignees = isAssigned
+            ? card.assignees?.filter(a => a.id !== user.id) || []
+            : [...(card.assignees || []), userAsAssignee];
+        onUpdate({ ...card, assignees: newAssignees });
 
         try {
             if (isAssigned) {
                 await unassignUserFromCard(card.id, user.id);
-                onUpdate({
-                    ...card,
-                    assignees: card.assignees?.filter(a => a.id !== user.id) || [],
-                });
-                toast.success(`Unassigned ${user.name || user.email}`);
             } else {
                 await assignUserToCard(card.id, user.id);
-                // Create a User-compatible object from WorkspaceMember
-                const userAsAssignee = {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    avatar_url: user.avatar_url,
-                    clerk_id: "",
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                } as User;
-                onUpdate({
-                    ...card,
-                    assignees: [...(card.assignees || []), userAsAssignee],
-                });
-                toast.success(`Assigned ${user.name || user.email}`);
             }
         } catch (error) {
             console.error("Error toggling assignee:", error);
+            // Rollback
+            onUpdate({
+                ...card,
+                assignees: isAssigned
+                    ? [...(card.assignees || []), userAsAssignee]
+                    : card.assignees?.filter(a => a.id !== user.id) || []
+            });
             toast.error("Failed to update assignee");
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    // File upload
+    const handleFileUpload = async (files: FileList | null) => {
+        if (!files || files.length === 0) return;
+
+        setUploadingFile(true);
+
+        for (const file of Array.from(files)) {
+            // Validate file size (1MB limit for server actions)
+            if (file.size > 1 * 1024 * 1024) {
+                toast.error(`${file.name} exceeds 1MB limit. Please use a smaller file.`);
+                continue;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const attachment = await uploadAttachment(card.id, formData);
+                if (attachment) {
+                    setAttachments(prev => [attachment, ...prev]);
+                    onUpdate({ ...card, attachments_count: (card.attachments_count || 0) + 1 });
+                }
+            } catch (error) {
+                console.error("Error uploading file:", error);
+                toast.error(`Failed to upload ${file.name}`);
+            }
+        }
+
+        setUploadingFile(false);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
+
+    // Delete attachment
+    const handleDeleteAttachment = async (attachmentId: string) => {
+        const prevAttachments = [...attachments];
+        // Optimistic update
+        setAttachments(attachments.filter(a => a.id !== attachmentId));
+        onUpdate({ ...card, attachments_count: Math.max(0, (card.attachments_count || 0) - 1) });
+
+        try {
+            await deleteAttachment(attachmentId);
+        } catch (error) {
+            console.error("Error deleting attachment:", error);
+            setAttachments(prevAttachments); // Rollback
+            onUpdate({ ...card, attachments_count: (card.attachments_count || 0) });
+            toast.error("Failed to delete attachment");
         }
     };
 
     // Handle delete with confirmation
     const handleDelete = () => {
-        if (window.confirm("Are you sure you want to delete this card? This action cannot be undone.")) {
-            onDelete();
-            toast.success("Card deleted");
-        }
+        setShowDeleteConfirm(true);
+    };
+
+    // Confirmed delete card
+    const confirmDeleteCard = () => {
+        setShowDeleteConfirm(false);
+        onDelete();
+    };
+
+    // Check if file is an image
+    const isImage = (type: string | null) => type?.startsWith("image/");
+
+    // Format file size
+    const formatFileSize = (bytes: number | null) => {
+        if (!bytes) return "";
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     };
 
     return (
@@ -310,11 +438,13 @@ export function CardModal({
                                                 </p>
                                                 {labels.map((label) => {
                                                     const hasLabel = card.labels?.some(l => l.id === label.id);
+                                                    const isLoading = actionLoading === `label-${label.id}`;
                                                     return (
                                                         <button
                                                             key={label.id}
                                                             onClick={() => handleToggleLabel(label)}
-                                                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                                                            disabled={isLoading}
+                                                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
                                                         >
                                                             <span
                                                                 className="w-3 h-3 rounded-full"
@@ -323,9 +453,11 @@ export function CardModal({
                                                             <span className="flex-1 text-left text-sm text-zinc-700 dark:text-zinc-300">
                                                                 {label.name}
                                                             </span>
-                                                            {hasLabel && (
+                                                            {isLoading ? (
+                                                                <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />
+                                                            ) : hasLabel ? (
                                                                 <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                                            )}
+                                                            ) : null}
                                                         </button>
                                                     );
                                                 })}
@@ -401,9 +533,14 @@ export function CardModal({
                                     />
                                     <button
                                         onClick={handleSaveDueDate}
-                                        className="px-3 py-2 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg text-sm font-medium hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors"
+                                        disabled={actionLoading === "dueDate"}
+                                        className="px-3 py-2 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg text-sm font-medium hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50"
                                     >
-                                        Save
+                                        {actionLoading === "dueDate" ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            "Save"
+                                        )}
                                     </button>
                                     <button
                                         onClick={() => {
@@ -417,13 +554,12 @@ export function CardModal({
                                 </div>
                             ) : card.due_date ? (
                                 <div
-                                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm cursor-pointer ${card.is_complete
+                                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${card.is_complete
                                         ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
                                         : new Date(card.due_date) < new Date()
                                             ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
                                             : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
                                         }`}
-                                    onClick={handleToggleComplete}
                                 >
                                     {card.is_complete ? (
                                         <CheckCircle2 className="w-4 h-4" />
@@ -473,11 +609,13 @@ export function CardModal({
                                                 {workspaceMembers.length > 0 ? (
                                                     workspaceMembers.map((user) => {
                                                         const isAssigned = card.assignees?.some(a => a.id === user.id);
+                                                        const isLoading = actionLoading === `assignee-${user.id}`;
                                                         return (
                                                             <button
                                                                 key={user.id}
                                                                 onClick={() => handleToggleAssignee(user)}
-                                                                className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                                                                disabled={isLoading}
+                                                                className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
                                                             >
                                                                 <div className="w-6 h-6 rounded-full bg-zinc-300 dark:bg-zinc-600 flex items-center justify-center text-xs font-medium text-zinc-600 dark:text-zinc-300">
                                                                     {user.avatar_url ? (
@@ -493,9 +631,11 @@ export function CardModal({
                                                                 <span className="flex-1 text-left text-sm text-zinc-700 dark:text-zinc-300">
                                                                     {user.name || user.email}
                                                                 </span>
-                                                                {isAssigned && (
+                                                                {isLoading ? (
+                                                                    <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />
+                                                                ) : isAssigned ? (
                                                                     <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                                                )}
+                                                                ) : null}
                                                             </button>
                                                         );
                                                     })
@@ -537,6 +677,110 @@ export function CardModal({
                             ) : (
                                 <p className="text-zinc-400 dark:text-zinc-500 text-sm italic">
                                     No assignees
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Attachments Section */}
+                        <div className="border-t border-zinc-200 dark:border-zinc-700 pt-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <h4 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+                                    <Paperclip className="w-4 h-4" />
+                                    Attachments
+                                    {attachments.length > 0 && (
+                                        <span className="text-xs bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 rounded">
+                                            {attachments.length}
+                                        </span>
+                                    )}
+                                </h4>
+                                <div>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        multiple
+                                        className="hidden"
+                                        onChange={(e) => handleFileUpload(e.target.files)}
+                                    />
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={uploadingFile}
+                                        className="flex items-center gap-1.5 px-2 py-1 text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
+                                    >
+                                        {uploadingFile ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <Upload className="w-4 h-4" />
+                                        )}
+                                        Add
+                                    </button>
+                                </div>
+                            </div>
+
+                            {loadingAttachments ? (
+                                <div className="flex items-center justify-center py-4">
+                                    <Loader2 className="w-5 h-5 text-zinc-400 animate-spin" />
+                                </div>
+                            ) : attachments.length > 0 ? (
+                                <div className="grid grid-cols-2 gap-3">
+                                    {attachments.map((attachment) => (
+                                        <div
+                                            key={attachment.id}
+                                            className="group relative bg-zinc-50 dark:bg-zinc-800 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700"
+                                        >
+                                            {isImage(attachment.type) ? (
+                                                <a
+                                                    href={attachment.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="block"
+                                                >
+                                                    <img
+                                                        src={attachment.url}
+                                                        alt={attachment.name}
+                                                        className="w-full h-32 object-cover"
+                                                    />
+                                                </a>
+                                            ) : (
+                                                <a
+                                                    href={attachment.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center justify-center h-32 bg-zinc-100 dark:bg-zinc-700"
+                                                >
+                                                    <File className="w-10 h-10 text-zinc-400" />
+                                                </a>
+                                            )}
+                                            <div className="p-2">
+                                                <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate">
+                                                    {attachment.name}
+                                                </p>
+                                                <p className="text-xs text-zinc-400">
+                                                    {formatFileSize(attachment.size_bytes)}
+                                                </p>
+                                            </div>
+                                            {/* Hover Actions */}
+                                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                                <a
+                                                    href={attachment.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="p-1.5 bg-white dark:bg-zinc-800 rounded shadow hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                                                >
+                                                    <ExternalLink className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400" />
+                                                </a>
+                                                <button
+                                                    onClick={() => handleDeleteAttachment(attachment.id)}
+                                                    className="p-1.5 bg-white dark:bg-zinc-800 rounded shadow hover:bg-red-100 dark:hover:bg-red-900/30"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-zinc-400 dark:text-zinc-500 text-sm italic text-center py-4">
+                                    No attachments yet
                                 </p>
                             )}
                         </div>
@@ -674,16 +918,6 @@ export function CardModal({
                                     Edit
                                 </button>
                                 <button
-                                    onClick={handleToggleComplete}
-                                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${card.is_complete
-                                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50"
-                                        : "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
-                                        }`}
-                                >
-                                    <CheckCircle2 className="w-4 h-4" />
-                                    {card.is_complete ? "Mark Incomplete" : "Mark Complete"}
-                                </button>
-                                <button
                                     onClick={() => setShowDueDatePicker(true)}
                                     className="w-full flex items-center gap-2 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-sm text-zinc-700 dark:text-zinc-300 transition-colors"
                                 >
@@ -704,6 +938,18 @@ export function CardModal({
                                     <Users className="w-4 h-4" />
                                     Assign Members
                                 </button>
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploadingFile}
+                                    className="w-full flex items-center gap-2 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-sm text-zinc-700 dark:text-zinc-300 transition-colors disabled:opacity-50"
+                                >
+                                    {uploadingFile ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <Paperclip className="w-4 h-4" />
+                                    )}
+                                    Add Attachment
+                                </button>
                                 <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 mt-2">
                                     <button
                                         onClick={handleDelete}
@@ -718,6 +964,19 @@ export function CardModal({
                     </div>
                 </div>
             </div>
+
+            {/* Delete Card Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={confirmDeleteCard}
+                title="Delete Card"
+                message="Are you sure you want to delete this card? This action cannot be undone."
+                confirmText="Delete Card"
+                cancelText="Cancel"
+                variant="danger"
+                icon="trash"
+            />
         </div>
     );
 }
