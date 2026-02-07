@@ -110,34 +110,24 @@ export function CardModal({
     const labelPickerRef = useRef<HTMLDivElement>(null);
     const assigneePickerRef = useRef<HTMLDivElement>(null);
 
-    // Fetch comments
+    // Fetch comments and attachments in parallel
     useEffect(() => {
-        async function fetchComments() {
+        async function fetchData() {
             try {
-                const c = await getComments(card.id);
-                setComments(c as CommentWithUser[]);
+                const [commentsResult, attachmentsResult] = await Promise.all([
+                    getComments(card.id),
+                    getAttachments(card.id),
+                ]);
+                setComments(commentsResult as CommentWithUser[]);
+                setAttachments(attachmentsResult);
             } catch (error) {
-                console.error("Error fetching comments:", error);
+                console.error("Error fetching card data:", error);
             } finally {
                 setLoadingComments(false);
-            }
-        }
-        fetchComments();
-    }, [card.id]);
-
-    // Fetch attachments
-    useEffect(() => {
-        async function fetchAttachments() {
-            try {
-                const a = await getAttachments(card.id);
-                setAttachments(a);
-            } catch (error) {
-                console.error("Error fetching attachments:", error);
-            } finally {
                 setLoadingAttachments(false);
             }
         }
-        fetchAttachments();
+        fetchData();
     }, [card.id]);
 
     // Handle save

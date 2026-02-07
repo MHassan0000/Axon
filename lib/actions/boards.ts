@@ -196,18 +196,48 @@ export async function getBoardWithLists(boardId: string): Promise<BoardWithLists
     .select("*")
     .eq("board_id", boardId);
 
-  // Get card labels
+  // Get card IDs for fetching related data
   const cardIds = cards?.map((c) => c.id) || [];
-  const { data: cardLabels } = await supabase
-    .from("card_labels")
-    .select("*")
-    .in("card_id", cardIds);
 
-  // Get card assignees with user info
-  const { data: cardAssignees } = await supabase
-    .from("card_assignees")
-    .select("*, users(*)")
-    .in("card_id", cardIds);
+  // Fetch all related data in parallel for better performance
+  const [cardLabelsResult, cardAssigneesResult, commentsCountResult, attachmentsCountResult] = await Promise.all([
+    // Card labels
+    supabase
+      .from("card_labels")
+      .select("*")
+      .in("card_id", cardIds),
+    // Card assignees with user info
+    supabase
+      .from("card_assignees")
+      .select("*, users(*)")
+      .in("card_id", cardIds),
+    // Comments count per card
+    supabase
+      .from("comments")
+      .select("card_id")
+      .in("card_id", cardIds),
+    // Attachments count per card
+    supabase
+      .from("attachments")
+      .select("card_id")
+      .in("card_id", cardIds),
+  ]);
+
+  const cardLabels = cardLabelsResult.data || [];
+  const cardAssignees = cardAssigneesResult.data || [];
+  const comments = commentsCountResult.data || [];
+  const attachments = attachmentsCountResult.data || [];
+
+  // Calculate counts per card
+  const commentsCountMap = new Map<string, number>();
+  comments.forEach((c) => {
+    commentsCountMap.set(c.card_id, (commentsCountMap.get(c.card_id) || 0) + 1);
+  });
+
+  const attachmentsCountMap = new Map<string, number>();
+  attachments.forEach((a) => {
+    attachmentsCountMap.set(a.card_id, (attachmentsCountMap.get(a.card_id) || 0) + 1);
+  });
 
   // Organize cards by list with their relations
   const listsWithCards = lists.map((list) => ({
@@ -216,14 +246,16 @@ export async function getBoardWithLists(boardId: string): Promise<BoardWithLists
       .filter((card) => card.list_id === list.id)
       .map((card) => ({
         ...card,
-        labels: (cardLabels || [])
+        labels: cardLabels
           .filter((cl) => cl.card_id === card.id)
           .map((cl) => labels?.find((l) => l.id === cl.label_id))
           .filter(Boolean),
-        assignees: (cardAssignees || [])
+        assignees: cardAssignees
           .filter((ca) => ca.card_id === card.id)
           .map((ca) => ca.users)
           .filter(Boolean),
+        comments_count: commentsCountMap.get(card.id) || 0,
+        attachments_count: attachmentsCountMap.get(card.id) || 0,
       })),
   }));
 

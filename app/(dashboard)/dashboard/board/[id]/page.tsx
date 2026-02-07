@@ -57,6 +57,7 @@ import {
 import { useBoardRealtime } from "@/lib/hooks/useRealtime";
 import { CardModal } from "@/components/dashboard-components/CardModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { BoardPageSkeleton } from "@/components/ui/Skeleton";
 import type {
     BoardWithLists,
     ListWithCards,
@@ -155,7 +156,9 @@ export default function BoardPage() {
                 lists: prev.lists.map((list) => ({
                     ...list,
                     cards: list.cards.map((c) =>
-                        c.id === card.id ? { ...c, ...card } : c
+                        c.id === card.id 
+                            ? { ...c, ...card, comments_count: c.comments_count, attachments_count: c.attachments_count } 
+                            : c
                     ),
                 })),
             };
@@ -228,7 +231,7 @@ export default function BoardPage() {
     });
 
     // Drag and Drop Handler
-    const handleDragEnd = async (result: DropResult) => {
+    const handleDragEnd = useCallback(async (result: DropResult) => {
         const { source, destination, type } = result;
 
         // Dropped outside droppable area
@@ -330,10 +333,10 @@ export default function BoardPage() {
                 }
             }
         }
-    };
+    }, [board, boardId]);
 
     // Create List Handler - Instant optimistic update
-    const handleAddList = async () => {
+    const handleAddList = useCallback(async () => {
         if (!newListName.trim() || !board) return;
 
         const tempId = `temp-${Date.now()}`;
@@ -392,10 +395,10 @@ export default function BoardPage() {
             });
             toast.error("Failed to create list");
         }
-    };
+    }, [board, boardId, newListName]);
 
     // Create Card Handler - Instant optimistic update with file upload support
-    const handleAddCard = async (listId: string, filesToUpload?: PendingFile[]) => {
+    const handleAddCard = useCallback(async (listId: string, filesToUpload?: PendingFile[]) => {
         if (!newCardTitle.trim() || !board) return;
 
         // Don't allow adding to temp lists
@@ -513,10 +516,10 @@ export default function BoardPage() {
             });
             toast.error("Failed to create card");
         }
-    };
+    }, [board, newCardTitle]);
 
     // Delete Card Handler
-    const handleDeleteCard = async (cardId: string, listId: string) => {
+    const handleDeleteCard = useCallback(async (cardId: string, listId: string) => {
         if (!board) return;
 
         try {
@@ -540,10 +543,10 @@ export default function BoardPage() {
             const b = await getBoardWithLists(boardId);
             setBoard(b);
         }
-    };
+    }, [board, boardId]);
 
     // Delete List Handler - show confirmation dialog
-    const handleDeleteList = (listId: string) => {
+    const handleDeleteList = useCallback((listId: string) => {
         if (!board) return;
         const list = board.lists.find(l => l.id === listId);
         setDeleteListConfirm({
@@ -551,7 +554,7 @@ export default function BoardPage() {
             listId,
             listName: list?.name || "this list",
         });
-    };
+    }, [board]);
 
     // Confirmed delete list
     const confirmDeleteList = async () => {
@@ -579,7 +582,7 @@ export default function BoardPage() {
     };
 
     // Toggle Card Complete Handler - Instant optimistic update
-    const handleToggleComplete = async (card: CardWithRelations) => {
+    const handleToggleComplete = useCallback(async (card: CardWithRelations) => {
         if (!board) return;
 
         // Don't allow toggling on temp cards
@@ -622,17 +625,11 @@ export default function BoardPage() {
                 setSelectedCard({ ...selectedCard, is_complete: card.is_complete });
             }
         }
-    };
+    }, [board, selectedCard]);
 
     // Loading state
     if (loading) {
-        return (
-            <div className="flex flex-col h-full bg-white dark:bg-black transition-colors duration-200">
-                <div className="flex items-center justify-center h-full">
-                    <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
-                </div>
-            </div>
-        );
+        return <BoardPageSkeleton />;
     }
 
     // Not found state
@@ -890,7 +887,7 @@ interface ListColumnProps {
     onToggleComplete: (card: CardWithRelations) => void;
 }
 
-function ListColumn({
+const ListColumn = React.memo(function ListColumn({
     list,
     dragHandleProps,
     onAddCard,
@@ -1080,13 +1077,13 @@ function ListColumn({
             </div>
         </div>
     );
-}
+});
 
 /* =====================================================
    Card Item Component
    ===================================================== */
 
-function CardItem({ 
+const CardItem = React.memo(function CardItem({ 
     card, 
     onClick, 
     onToggleComplete 
@@ -1209,7 +1206,7 @@ function CardItem({
             )}
         </div>
     );
-}
+});
 
 /* =====================================================
    Add Card Form Component with File Upload
@@ -1234,7 +1231,7 @@ interface AddCardFormProps {
     onCancelAdd: () => void;
 }
 
-function AddCardForm({
+const AddCardForm = React.memo(function AddCardForm({
     newCardTitle,
     setNewCardTitle,
     pendingFiles,
@@ -1431,4 +1428,4 @@ function AddCardForm({
             </div>
         </div>
     );
-}
+});
