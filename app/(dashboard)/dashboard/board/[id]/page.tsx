@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -58,6 +58,14 @@ import { useBoardRealtime } from "@/lib/hooks/useRealtime";
 import { CardModal } from "@/components/dashboard-components/CardModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { BoardPageSkeleton } from "@/components/ui/Skeleton";
+import { 
+    BoardFilter, 
+    type FilterState, 
+    initialFilterState, 
+    filterCard, 
+    isFilterActive,
+    getActiveFilterCount 
+} from "@/components/dashboard-components/BoardFilter";
 import type {
     BoardWithLists,
     ListWithCards,
@@ -92,6 +100,19 @@ export default function BoardPage() {
     const [selectedCard, setSelectedCard] = useState<CardWithRelations | null>(null);
     const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
     const [showBoardSettings, setShowBoardSettings] = useState(false);
+    
+    // Filter state
+    const [filters, setFilters] = useState<FilterState>(initialFilterState);
+
+    // Memoized filtered lists for rendering
+    const filteredLists = useMemo(() => {
+        if (!board || !isFilterActive(filters)) return board?.lists || [];
+        
+        return board.lists.map(list => ({
+            ...list,
+            cards: list.cards.filter(card => filterCard(card, filters)),
+        }));
+    }, [board, filters]);
 
     // Confirmation dialog state
     const [deleteListConfirm, setDeleteListConfirm] = useState<{ isOpen: boolean; listId: string | null; listName: string }>({
@@ -671,6 +692,13 @@ export default function BoardPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {/* Filter Button */}
+                    <BoardFilter
+                        labels={board.labels || []}
+                        members={workspaceMembers}
+                        filters={filters}
+                        onFiltersChange={setFilters}
+                    />
                     <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-sm font-medium transition-colors">
                         <Users className="w-4 h-4" />
                         <span className="hidden sm:inline">Share</span>
@@ -695,8 +723,8 @@ export default function BoardPage() {
                             className="flex-1 overflow-x-auto overflow-y-hidden p-4"
                         >
                             <div className="flex gap-4 h-full items-start">
-                                {/* Lists - order maintained by optimistic updates, no sorting needed */}
-                                {board.lists.map((list, index) => (
+                                {/* Lists - filtered based on active filters */}
+                                {filteredLists.map((list, index) => (
                                         <Draggable
                                             key={list.id}
                                             draggableId={list.id}
