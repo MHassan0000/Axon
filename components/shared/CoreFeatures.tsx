@@ -6,7 +6,7 @@ import { coreFeatures } from "@/constants/homepage";
 
 export default function CoreFeatures() {
   return (
-    <section className="relative w-full py-12 sm:py-16 md:py-24 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800">
+    <section className="relative w-full py-12 sm:py-16 md:py-24 bg-zinc-50/50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         {/* Section Header */}
         <div className="text-center mb-10 sm:mb-12 md:mb-16">
@@ -33,7 +33,7 @@ export default function CoreFeatures() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-zinc-600 dark:text-zinc-400 text-base sm:text-lg max-w-2xl mx-auto"
+            className="text-zinc-700 dark:text-zinc-400 text-base sm:text-lg max-w-2xl mx-auto"
           >
             Powerful features that stay out of your way
           </motion.p>
@@ -54,7 +54,7 @@ export default function CoreFeatures() {
               className="group relative"
             >
               {/* Card */}
-              <div className="relative h-full p-4 sm:p-6 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-300 overflow-hidden hover:shadow-xl dark:hover:shadow-zinc-950/50 hover:-translate-y-1">
+              <div className="relative h-full p-4 sm:p-6 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700 transition-all duration-300 overflow-hidden hover:shadow-xl dark:hover:shadow-zinc-950/50 hover:-translate-y-1">
                 {/* Subtle glow on hover */}
                 <div className="absolute inset-0 bg-linear-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
@@ -73,7 +73,7 @@ export default function CoreFeatures() {
                 <h3 className="relative text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                   {feature.title}
                 </h3>
-                <p className="relative text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                <p className="relative text-sm text-zinc-700 dark:text-zinc-400 leading-relaxed">
                   {feature.description}
                 </p>
               </div>

@@ -6,7 +6,7 @@ import { workflows } from "@/constants/homepage";
 
 export default function AppWorkflow() {
     return (
-        <section className="relative w-full py-12 sm:py-16 md:py-24 bg-zinc-50 dark:bg-zinc-900/50 border-t border-zinc-200 dark:border-zinc-800">
+        <section className="relative w-full py-12 sm:py-16 md:py-24 bg-zinc-100 dark:bg-zinc-900/50 border-t border-zinc-200 dark:border-zinc-800">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
                 {/* Section Header */}
                 <div className="text-center mb-10 sm:mb-12 md:mb-16">
@@ -33,7 +33,7 @@ export default function AppWorkflow() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.5, delay: 0.2 }}
-                        className="text-zinc-600 dark:text-zinc-400 text-base sm:text-lg max-w-2xl mx-auto"
+                        className="text-zinc-700 dark:text-zinc-400 text-base sm:text-lg max-w-2xl mx-auto"
                     >
                         Connect your favorite tools and let AI transform your workflow
                     </motion.p>
@@ -56,7 +56,7 @@ export default function AppWorkflow() {
                         >
                             {/* Image */}
                             <div className="w-full lg:w-1/2">
-                                <div className="relative rounded-xl overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                                <div className="relative rounded-xl overflow-hidden bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
                                     <Image
                                         src={workflow.image}
                                         alt={workflow.imageAlt}
@@ -77,7 +77,7 @@ export default function AppWorkflow() {
                                         {workflow.title}
                                     </h3>
                                 </div>
-                                <p className="text-zinc-600 dark:text-zinc-400 text-base sm:text-lg leading-relaxed">
+                                <p className="text-zinc-700 dark:text-zinc-400 text-base sm:text-lg leading-relaxed">
                                     {workflow.description}
                                 </p>
                             </div>

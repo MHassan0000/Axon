@@ -20,7 +20,7 @@ export default function Testimonials() {
     };
 
     return (
-        <section className="relative w-full py-12 sm:py-16 md:py-24 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800">
+        <section className="relative w-full py-12 sm:py-16 md:py-24 bg-zinc-50/50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
                 {/* Testimonial Carousel */}
                 <div className="relative mb-8 sm:mb-12">
@@ -45,14 +45,14 @@ export default function Testimonials() {
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={prevSlide}
-                                className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors"
+                                className="p-2 rounded-lg bg-zinc-200 dark:bg-zinc-900 hover:bg-zinc-300 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors"
                                 aria-label="Previous testimonial"
                             >
                                 <ChevronLeft className="w-5 h-5" />
                             </button>
                             <button
                                 onClick={nextSlide}
-                                className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors"
+                                className="p-2 rounded-lg bg-zinc-200 dark:bg-zinc-900 hover:bg-zinc-300 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors"
                                 aria-label="Next testimonial"
                             >
                                 <ChevronRight className="w-5 h-5" />
@@ -69,12 +69,12 @@ export default function Testimonials() {
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -100 }}
                                 transition={{ duration: 0.3 }}
-                                className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 p-4 sm:p-6 md:p-8 lg:p-12 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-zinc-800"
+                                className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 p-4 sm:p-6 md:p-8 lg:p-12 bg-white dark:bg-zinc-900/50 rounded-2xl border border-zinc-300 dark:border-zinc-800"
                             >
                                 {/* Left: Quote */}
                                 <div className="flex flex-col justify-between">
                                     <div>
-                                        <p className="text-zinc-700 dark:text-zinc-300 text-base sm:text-lg md:text-xl leading-relaxed mb-4 sm:mb-6">
+                                        <p className="text-zinc-800 dark:text-zinc-300 text-base sm:text-lg md:text-xl leading-relaxed mb-4 sm:mb-6">
                                             "{testimonials[currentIndex].quote}"
                                         </p>
                                     </div>
@@ -83,7 +83,7 @@ export default function Testimonials() {
                                         <p className="font-semibold text-zinc-900 dark:text-zinc-100">
                                             {testimonials[currentIndex].author}
                                         </p>
-                                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                        <p className="text-sm text-zinc-700 dark:text-zinc-400">
                                             {testimonials[currentIndex].role} at {testimonials[currentIndex].company}
                                         </p>
                                     </div>
@@ -104,7 +104,7 @@ export default function Testimonials() {
 
                 {/* Bottom Section */}
                 <div className="text-center space-y-6 sm:space-y-8">
-                    <p className="text-zinc-600 dark:text-zinc-400 text-sm sm:text-base md:text-lg">
+                    <p className="text-zinc-700 dark:text-zinc-400 text-sm sm:text-base md:text-lg">
                         Join a community of <span className="font-semibold text-zinc-900 dark:text-zinc-100">millions of users globally</span> who are using Axon to get more done.
                     </p>
 
@@ -113,7 +113,7 @@ export default function Testimonials() {
                         {companyLogos.map((company, index) => (
                             <div
                                 key={index}
-                                className="flex items-center gap-2 text-zinc-400 dark:text-zinc-600 font-semibold text-base sm:text-lg md:text-xl tracking-tight hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
+                                className="flex items-center gap-2 text-zinc-500 dark:text-zinc-600 font-semibold text-base sm:text-lg md:text-xl tracking-tight hover:text-zinc-700 dark:hover:text-zinc-400 transition-colors"
                             >
                                 <company.icon className="w-5 h-5 sm:w-6 sm:h-6" />
                                 <span>{company.name}</span>

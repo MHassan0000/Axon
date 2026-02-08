@@ -40,7 +40,7 @@ export default function SignupCTA() {
     };
 
     return (
-        <section className="relative w-full py-16 sm:py-20 md:py-28 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800">
+        <section className="relative w-full py-16 sm:py-20 md:py-28 bg-zinc-100 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-8 text-center">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -52,7 +52,7 @@ export default function SignupCTA() {
                     <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-zinc-900 dark:text-zinc-100 mb-3 sm:mb-4">
                         Get started with Axon today
                     </h2>
-                    <p className="text-zinc-600 dark:text-zinc-400 text-base sm:text-lg mb-6 sm:mb-8 max-w-2xl mx-auto">
+                    <p className="text-zinc-700 dark:text-zinc-400 text-base sm:text-lg mb-6 sm:mb-8 max-w-2xl mx-auto">
                         Join thousands of teams already working smarter
                     </p>
 

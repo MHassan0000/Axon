@@ -26,7 +26,7 @@ export default function Navbar() {
       <div className="fixed top-0 inset-x-0 max-w-7xl mx-auto z-100 px-4">
         {/* Rounded Navbar Container */}
         <nav
-          className="relative rounded-full border border-slate-200 dark:border-white/20 bg-slate-50/90 dark:bg-black backdrop-blur-lg shadow-lg"
+          className="relative rounded-full border border-zinc-300 dark:border-white/20 bg-zinc-50/80 dark:bg-black backdrop-blur-lg shadow-lg"
           onMouseLeave={() => setActive(null)}
         >
           <div className="flex items-center justify-between px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-6">
@@ -109,7 +109,7 @@ export default function Navbar() {
 
               <Link
                 href="/pricing"
-                className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white font-medium transition-colors"
+                className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white font-medium transition-colors"
               >
                 Pricing
               </Link>

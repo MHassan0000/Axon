@@ -48,14 +48,14 @@ export default function Hero() {
             className="flex flex-col items-center lg:items-start gap-6 md:gap-8 flex-1"
           >
             {/* Main Headline */}
-            <h1 className="mt-6 sm:mt-8 lg:mt-0 bg-linear-to-br from-slate-600 to-slate-800 dark:from-slate-300 dark:to-slate-500 py-4 bg-clip-text text-center lg:text-left text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight text-transparent leading-tight">
+            <h1 className="mt-6 sm:mt-8 lg:mt-0 bg-linear-to-br from-zinc-700 to-zinc-900 dark:from-slate-300 dark:to-slate-500 py-4 bg-clip-text text-center lg:text-left text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight text-transparent leading-tight">
               Build projects
               <br />
               the right way
             </h1>
 
             {/* Subheadline */}
-            <p className="text-zinc-600 dark:text-slate-400 text-center lg:text-left text-sm sm:text-base md:text-lg lg:text-xl max-w-xl">
+            <p className="text-zinc-700 dark:text-slate-400 text-center lg:text-left text-sm sm:text-base md:text-lg lg:text-xl max-w-xl">
               Streamline your workflow with powerful task management,
               team collaboration, and intelligent automation. Built for modern teams.
             </p>
@@ -72,7 +72,7 @@ export default function Hero() {
 
               <Link
                 href="/demo"
-                className="inline-flex items-center gap-2 px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 bg-zinc-800/50 dark:bg-white/10 hover:bg-zinc-700/50 dark:hover:bg-white/20 text-zinc-900 dark:text-white font-semibold rounded-lg border border-zinc-300 dark:border-white/20 backdrop-blur-sm transition-all duration-300 hover:scale-105 w-full sm:w-auto justify-center text-sm sm:text-base"
+                className="inline-flex items-center gap-2 px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 bg-zinc-200 dark:bg-white/10 hover:bg-zinc-300 dark:hover:bg-white/20 text-zinc-900 dark:text-white font-semibold rounded-lg border border-zinc-300 dark:border-white/20 backdrop-blur-sm transition-all duration-300 hover:scale-105 w-full sm:w-auto justify-center text-sm sm:text-base"
               >
                 Watch Demo
               </Link>
@@ -91,7 +91,7 @@ export default function Hero() {
             className="flex-1 w-full max-w-xl lg:max-w-none"
           >
             {/* Video container */}
-            <div className="relative rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-lg bg-zinc-100 dark:bg-zinc-900">
+            <div className="relative rounded-xl overflow-hidden border border-zinc-300 dark:border-zinc-800 shadow-lg bg-zinc-100 dark:bg-zinc-900">
               <video
                 ref={videoRef}
                 autoPlay

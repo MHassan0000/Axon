@@ -23,10 +23,10 @@ export default function WhyDifferent() {
               <br />
               Powerfully Fast
             </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 text-base sm:text-lg leading-relaxed mb-6 sm:mb-8">
+            <p className="text-zinc-700 dark:text-zinc-400 text-base sm:text-lg leading-relaxed mb-6 sm:mb-8">
               We're not trying to be everything to everyone. We built a task management tool that does one thing incredibly well: help you get work done without getting in the way.
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 text-sm sm:text-base leading-relaxed">
+            <p className="text-zinc-700 dark:text-zinc-400 text-sm sm:text-base leading-relaxed">
               No complicated workflows. No feature overload. No learning curve. Just a clean, fast, and reliable workspace that respects your time and focus.
             </p>
           </motion.div>
@@ -45,10 +45,10 @@ export default function WhyDifferent() {
                 }}
                 className="group"
               >
-                <div className="p-4 sm:p-6 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-300 hover:shadow-lg dark:hover:shadow-zinc-950/50">
+                <div className="p-4 sm:p-6 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700 transition-all duration-300 hover:shadow-lg dark:hover:shadow-zinc-950/50">
                   <div className="flex items-start gap-3 sm:gap-4">
                     {/* Icon */}
-                    <div className="shrink-0 p-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 group-hover:bg-indigo-500/10 dark:group-hover:bg-indigo-500/20 transition-colors duration-300">
+                    <div className="shrink-0 p-2.5 rounded-lg bg-zinc-200 dark:bg-zinc-800 group-hover:bg-indigo-500/10 dark:group-hover:bg-indigo-500/20 transition-colors duration-300">
                       <value.icon className="w-5 h-5 text-zinc-700 dark:text-zinc-300 group-hover:text-indigo-500 transition-colors duration-300" />
                     </div>
 
@@ -57,7 +57,7 @@ export default function WhyDifferent() {
                       <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
                         {value.title}
                       </h3>
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                      <p className="text-sm text-zinc-700 dark:text-zinc-400 leading-relaxed">
                         {value.description}
                       </p>
                     </div>
