@@ -6,7 +6,7 @@ import CoreFeatures from "@/components/shared/CoreFeatures";
 import WhyDifferent from "@/components/shared/WhyDifferent";
 import Testimonials from "@/components/shared/Testimonials";
 import SignupCTA from "@/components/shared/SignupCTA";
-import Footer from "@/components/shared/Footer";
+
 
 export default function Home() {
   return (
@@ -21,7 +21,7 @@ export default function Home() {
       <WhyDifferent />
       <Testimonials />
       <SignupCTA />
-      <Footer />
+
     </main>
   );
 }
