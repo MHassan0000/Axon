@@ -83,7 +83,7 @@ export default function Sidebar() {
             {/* Mobile Menu Button - positioned in navbar area */}
             <button
                 onClick={() => setIsMobileOpen(true)}
-                className="md:hidden fixed top-3.5 left-4 z-60 p-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-200 shadow-sm"
+                className="md:hidden fixed top-2 left-4 z-60 p-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-200 shadow-sm"
                 aria-label="Open menu"
             >
                 <Menu className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
@@ -123,7 +123,7 @@ export default function Sidebar() {
                             Axon
                         </span>
                     )}
-                {/* Desktop Toggle Button */}
+                    {/* Desktop Toggle Button */}
                     <button
                         onClick={() => setIsCollapsed(!isCollapsed)}
                         className={`
