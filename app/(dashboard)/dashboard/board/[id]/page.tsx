@@ -686,7 +686,7 @@ export default function BoardPage() {
             style={boardBackgroundStyle}
         >
             {/* Board Header */}
-            <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 bg-black/30 backdrop-blur-sm border-b border-white/10">
+            <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 bg-black/30 backdrop-blur-sm border-b border-white/10 relative z-50">
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <button
                         onClick={() => router.back()}

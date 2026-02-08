@@ -248,7 +248,7 @@ export function BoardFilter({ labels, members, filters, onFiltersChange }: Board
     }, [onFiltersChange]);
 
     return (
-        <div className="relative">
+        <div className={`relative ${isOpen ? "z-[100]" : ""}`}>
             {/* Filter Button */}
             <button
                 ref={buttonRef}
@@ -278,7 +278,7 @@ export function BoardFilter({ labels, members, filters, onFiltersChange }: Board
                     />
                     <div
                         ref={dropdownRef}
-                        className="fixed sm:absolute right-4 sm:right-0 top-auto sm:top-full mt-2 z-[100] w-[calc(100vw-2rem)] sm:w-80 max-h-[70vh] overflow-y-auto bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xl"
+                        className="fixed sm:absolute right-4 sm:right-0 top-auto sm:top-full mt-2 z-[100] w-[calc(100vw-2rem)] sm:w-80 max-h-[70vh] overflow-y-auto bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xl isolate"
                     >
                     {/* Header */}
                     <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900">
