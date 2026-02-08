@@ -8,7 +8,6 @@ import {
     Moon,
     LayoutGrid,
     FolderKanban,
-    X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -194,23 +193,11 @@ export default function DashboardNav() {
                 </div>
             </header>
 
-            {/* Mobile Search Overlay */}
+            {/* Mobile Search - uses the same modal as desktop */}
             {showMobileSearch && (
-                <div className="md:hidden fixed inset-0 z-[200] bg-white dark:bg-zinc-950">
-                    <div className="flex items-center gap-3 p-4 border-b border-zinc-200 dark:border-zinc-800">
-                        <button
-                            onClick={() => setShowMobileSearch(false)}
-                            className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0"
-                        >
-                            <X className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
-                        </button>
-                        <div className="flex-1">
-                            <Suspense fallback={<SearchPlaceholder />}>
-                                <LazyGlobalSearch autoFocus onResultClick={() => setShowMobileSearch(false)} />
-                            </Suspense>
-                        </div>
-                    </div>
-                </div>
+                <Suspense fallback={null}>
+                    <LazyGlobalSearch isOpen={true} onClose={() => setShowMobileSearch(false)} />
+                </Suspense>
             )}
         </>
     );

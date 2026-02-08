@@ -24,8 +24,8 @@ import type { SearchResult } from "@/lib/actions/search";
 
 interface GlobalSearchProps {
     placeholder?: string;
-    autoFocus?: boolean;
-    onResultClick?: () => void;
+    isOpen?: boolean;
+    onClose?: () => void;
 }
 
 // =====================================================
@@ -205,12 +205,21 @@ const RecentSearchItem = memo(function RecentSearchItem({
 // Main Component
 // =====================================================
 
-export function GlobalSearch({ placeholder = "Search...", autoFocus = false, onResultClick }: GlobalSearchProps) {
+export function GlobalSearch({ placeholder = "Search...", isOpen: externalIsOpen, onClose: externalOnClose }: GlobalSearchProps) {
     const router = useRouter();
     const inputRef = useRef<HTMLInputElement>(null);
-    const [isOpen, setIsOpen] = useState(false);
+    const [internalIsOpen, setInternalIsOpen] = useState(false);
     const [query, setQuery] = useState("");
     const [selectedIndex, setSelectedIndex] = useState(0);
+
+    // Use external control if provided, otherwise use internal state
+    const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+    const setIsOpen = (value: boolean) => {
+        if (externalOnClose && !value) {
+            externalOnClose();
+        }
+        setInternalIsOpen(value);
+    };
 
     // Use React Query for search
     const {
@@ -252,12 +261,12 @@ export function GlobalSearch({ placeholder = "Search...", autoFocus = false, onR
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [isOpen]);
 
-    // Focus input when modal opens or autoFocus is true
+    // Focus input when modal opens
     useEffect(() => {
-        if ((isOpen || autoFocus) && inputRef.current) {
+        if (isOpen && inputRef.current) {
             setTimeout(() => inputRef.current?.focus(), 50);
         }
-    }, [isOpen, autoFocus]);
+    }, [isOpen]);
 
     // Reset selected index when results change
     useEffect(() => {
@@ -272,9 +281,6 @@ export function GlobalSearch({ placeholder = "Search...", autoFocus = false, onR
 
             // Save to recent searches
             addRecentSearch(result.name, result);
-
-            // Notify parent of result click (for mobile overlay)
-            onResultClick?.();
 
             // Navigate based on type
             switch (result.type) {
@@ -297,7 +303,7 @@ export function GlobalSearch({ placeholder = "Search...", autoFocus = false, onR
                     break;
             }
         },
-        [router, addRecentSearch, onResultClick]
+        [router, addRecentSearch, setIsOpen]
     );
 
     // Handle recent search selection
@@ -333,10 +339,10 @@ export function GlobalSearch({ placeholder = "Search...", autoFocus = false, onR
         setIsOpen(false);
         setQuery("");
         setSelectedIndex(0);
-    }, []);
+    }, [setIsOpen]);
 
-    // Search button (collapsed state) - skip if autoFocus is set (mobile mode)
-    if (!isOpen && !autoFocus) {
+    // Search button (collapsed state) - only show if not externally controlled
+    if (!isOpen && externalIsOpen === undefined) {
         return (
             <button
                 onClick={() => setIsOpen(true)}
@@ -351,140 +357,12 @@ export function GlobalSearch({ placeholder = "Search...", autoFocus = false, onR
         );
     }
 
-    // Mobile inline search (when autoFocus is true)
-    if (autoFocus) {
-        return (
-            <div className="flex flex-col w-full">
-                {/* Search Input */}
-                <div className="flex items-center gap-3">
-                    <Search className="w-5 h-5 text-zinc-400 shrink-0" />
-                    <input
-                        ref={inputRef}
-                        type="text"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Search workspaces, boards, lists, and cards..."
-                        className="flex-1 bg-transparent text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none text-base"
-                        autoComplete="off"
-                        autoCorrect="off"
-                        autoCapitalize="off"
-                        spellCheck={false}
-                    />
-                    {(isLoading || isFetching) && query.trim().length >= 2 && (
-                        <Loader2 className="w-5 h-5 text-zinc-400 animate-spin shrink-0" />
-                    )}
-                    {query && (
-                        <button
-                            onClick={() => setQuery("")}
-                            className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                        >
-                            <X className="w-4 h-4 text-zinc-500" />
-                        </button>
-                    )}
-                </div>
-
-                {/* Results - shown below input */}
-                <div className="absolute left-0 right-0 top-full bg-white dark:bg-zinc-950 max-h-[calc(100vh-120px)] overflow-y-auto">
-                    {/* Recent Searches */}
-                    {showRecentSearches && (
-                        <div className="py-2 border-b border-zinc-200 dark:border-zinc-800">
-                            <div className="flex items-center justify-between px-4 py-2">
-                                <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                                    Recent Searches
-                                </span>
-                                <button
-                                    onClick={clearRecentSearches}
-                                    className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-                                >
-                                    Clear all
-                                </button>
-                            </div>
-                            <div className="group">
-                                {recentSearches.map((recent, index) => (
-                                    <RecentSearchItem
-                                        key={recent.timestamp}
-                                        query={recent.query}
-                                        onSelect={() => handleRecentSearchSelect(recent.query)}
-                                        onRemove={() => removeRecentSearch(recent.query)}
-                                        isSelected={index === selectedIndex}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* No Results */}
-                    {query.trim().length >= 2 && results.length === 0 && !isLoading && !isFetching && (
-                        <div className="px-4 py-12 text-center">
-                            <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-                                <Search className="w-6 h-6 text-zinc-400" />
-                            </div>
-                            <p className="text-zinc-600 dark:text-zinc-400 font-medium mb-1">
-                                No results found
-                            </p>
-                            <p className="text-sm text-zinc-500">
-                                No matches for "{query}". Try a different search term.
-                            </p>
-                        </div>
-                    )}
-
-                    {/* Search Results */}
-                    {results.length > 0 && (
-                        <div className="py-2">
-                            <div className="px-4 py-2">
-                                <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                                    Results ({searchResponse?.totalCount || 0})
-                                </span>
-                            </div>
-                            {results.map((result, index) => (
-                                <SearchResultItem
-                                    key={`${result.type}-${result.id}`}
-                                    result={result}
-                                    isSelected={index === selectedIndex}
-                                    onClick={() => handleSelect(result)}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Empty State (no query) */}
-                    {!query.trim() && !showRecentSearches && (
-                        <div className="px-4 py-12 text-center">
-                            <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-                                <Search className="w-6 h-6 text-zinc-400" />
-                            </div>
-                            <p className="text-zinc-600 dark:text-zinc-400 font-medium mb-1">
-                                Search your workspace
-                            </p>
-                            <p className="text-sm text-zinc-500">
-                                Find workspaces, boards, lists, and cards
-                            </p>
-                        </div>
-                    )}
-
-                    {/* Searching State */}
-                    {query.trim().length >= 2 && isLoading && results.length === 0 && (
-                        <div className="px-4 py-12 text-center">
-                            <Loader2 className="w-8 h-8 text-zinc-400 animate-spin mx-auto mb-4" />
-                            <p className="text-zinc-500 text-sm">Searching...</p>
-                        </div>
-                    )}
-
-                    {/* Minimum characters hint */}
-                    {query.trim().length > 0 && query.trim().length < 2 && (
-                        <div className="px-4 py-8 text-center">
-                            <p className="text-sm text-zinc-500">
-                                Type at least 2 characters to search
-                            </p>
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
+    // Don't render modal if not open
+    if (!isOpen) {
+        return null;
     }
 
-    // Full search modal (desktop)
+    // Full search modal (works for both desktop and mobile)
     return (
         <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4">
             {/* Backdrop */}

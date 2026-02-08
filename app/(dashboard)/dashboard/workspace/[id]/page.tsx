@@ -9,7 +9,6 @@ import {
     MoreHorizontal,
     Loader2,
     LayoutGrid,
-    Users,
     Settings,
     Image as ImageIcon,
     X,
@@ -226,9 +225,6 @@ export default function WorkspacePage() {
                 </div>
 
                 <div className="flex items-center gap-2 ml-auto sm:ml-0">
-                    <button className="p-1.5 sm:p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                        <Users className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 dark:text-zinc-400" />
-                    </button>
                     <button
                         onClick={() => setShowSettingsModal(true)}
                         className="p-1.5 sm:p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
