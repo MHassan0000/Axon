@@ -389,6 +389,14 @@ export async function removeWorkspaceMember(
     return false;
   }
 
+  // Delete any existing invite records for this user/workspace
+  // This allows the user to be re-invited later
+  await supabase
+    .from("workspace_invites")
+    .delete()
+    .eq("workspace_id", workspaceId)
+    .eq("invitee_id", userId);
+
   return true;
 }
 
@@ -720,6 +728,14 @@ export async function leaveWorkspace(
     console.error("Error leaving workspace:", deleteError);
     return { success: false, error: "Failed to leave workspace" };
   }
+
+  // Delete any existing invite records for this user/workspace
+  // This allows the user to be re-invited later
+  await supabase
+    .from("workspace_invites")
+    .delete()
+    .eq("workspace_id", workspaceId)
+    .eq("invitee_id", user.id);
 
   // Notify the workspace owner
   if (workspace?.owner_id) {
