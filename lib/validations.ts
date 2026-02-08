@@ -106,7 +106,15 @@ export const createCardSchema = z.object({
 export const updateCardSchema = z.object({
   title: cardTitleSchema.optional(),
   description: cardDescriptionSchema,
-  due_date: z.string().datetime().nullable().optional(),
+  due_date: z.string().nullable().optional().transform((val) => {
+    // Accept both date-only (YYYY-MM-DD) and datetime (ISO) formats
+    if (!val) return val;
+    // If it's just a date, convert to ISO datetime at start of day
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      return new Date(val + 'T00:00:00.000Z').toISOString();
+    }
+    return val;
+  }),
 });
 
 // =====================================================

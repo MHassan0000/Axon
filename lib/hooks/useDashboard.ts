@@ -172,3 +172,15 @@ export function useRefetchDashboardData() {
         queryClient.refetchQueries({ queryKey: queryKeys.dashboard.stats() });
     };
 }
+
+/**
+ * Hook to invalidate calendar cache when due dates change
+ * Use this after updating a card's due date
+ */
+export function useInvalidateCalendar() {
+    const queryClient = useQueryClient();
+    
+    return () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.cards.withDueDates() });
+    };
+}

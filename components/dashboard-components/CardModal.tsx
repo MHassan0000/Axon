@@ -36,6 +36,7 @@ import {
     uploadAttachment,
     deleteAttachment,
 } from "@/lib/actions";
+import { useInvalidateCalendar } from "@/lib/hooks/useDashboard";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type {
     CardWithRelations,
@@ -106,6 +107,9 @@ export function CardModal({
     // Delete confirmation state
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+    // Calendar cache invalidation
+    const invalidateCalendar = useInvalidateCalendar();
+
     // Refs for click outside
     const labelPickerRef = useRef<HTMLDivElement>(null);
     const assigneePickerRef = useRef<HTMLDivElement>(null);
@@ -160,7 +164,15 @@ export function CardModal({
         setShowDueDatePicker(false);
 
         try {
-            await updateCard(card.id, { due_date: newDueDate });
+            const result = await updateCard(card.id, { due_date: newDueDate });
+            if (result) {
+                // Invalidate calendar cache so it updates in real-time
+                invalidateCalendar();
+            } else {
+                // Rollback on failure
+                onUpdate({ ...card, due_date: prevDueDate });
+                toast.error("Failed to update due date");
+            }
         } catch (error) {
             console.error("Error updating due date:", error);
             onUpdate({ ...card, due_date: prevDueDate }); // Rollback
