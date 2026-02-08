@@ -90,8 +90,8 @@ export default function NotificationsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-6">
-            <div className="max-w-3xl mx-auto">
+        <div className="h-full overflow-y-auto bg-zinc-50 dark:bg-zinc-950 p-4 md:p-6">
+            <div className="max-w-3xl mx-auto pb-8">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                     <div>

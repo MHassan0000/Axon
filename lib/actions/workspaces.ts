@@ -657,17 +657,7 @@ export async function declineWorkspaceInvite(
     return { success: false, error: "Invite not found or already responded" };
   }
 
-  // Update invite status
-  const { error: updateError } = await supabase
-    .from("workspace_invites")
-    .update({ status: "declined", responded_at: new Date().toISOString() })
-    .eq("id", inviteId);
-
-  if (updateError) {
-    return { success: false, error: "Failed to decline invite" };
-  }
-
-  // Notify the inviter
+  // Notify the inviter before deleting the invite
   const workspaceName = (invite.workspaces as any)?.name || "the workspace";
   await supabase.from("notifications").insert({
     user_id: invite.inviter_id,
@@ -675,6 +665,16 @@ export async function declineWorkspaceInvite(
     title: "Invitation Declined",
     message: `${user.name || "Someone"} declined your invitation to join "${workspaceName}"`,
   });
+
+  // Delete the invite record (allows user to be re-invited later)
+  const { error: deleteError } = await supabase
+    .from("workspace_invites")
+    .delete()
+    .eq("id", inviteId);
+
+  if (deleteError) {
+    return { success: false, error: "Failed to decline invite" };
+  }
 
   return { success: true };
 }
