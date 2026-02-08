@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "./queryKeys";
 import {
     getAllUserBoards,
@@ -9,6 +9,7 @@ import {
     getAnalyticsSummary,
     getDashboardStats,
     getRecentActivity,
+    deleteAllActivity,
 } from "@/lib/actions";
 
 // =====================================================
@@ -247,4 +248,20 @@ export function useInvalidateOnCardChange() {
             queryClient.invalidateQueries({ queryKey: queryKeys.cards.withDueDates() });
         }
     };
+}
+
+/**
+ * Mutation hook to delete all activity
+ * Automatically invalidates the activity cache on success
+ */
+export function useDeleteAllActivityMutation() {
+    const queryClient = useQueryClient();
+    
+    return useMutation({
+        mutationFn: deleteAllActivity,
+        onSuccess: () => {
+            // Invalidate activity cache to refresh the UI
+            queryClient.invalidateQueries({ queryKey: queryKeys.activity.all });
+        },
+    });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
     Activity,
     Clock,
@@ -13,10 +13,14 @@ import {
     Tag,
     Edit3,
     XCircle,
+    Trash2,
+    AlertTriangle,
+    Loader2,
 } from "lucide-react";
-import { useRecentActivityQuery } from "@/lib/hooks";
+import { useRecentActivityQuery, useDeleteAllActivityMutation } from "@/lib/hooks";
 import { ActivityPageSkeleton } from "@/components/ui/Skeleton";
 import type { ActivityLog } from "@/lib/types/database";
+import { toast } from "sonner";
 
 interface ActivityWithUser extends ActivityLog {
     user: { name: string; avatar_url: string };
@@ -125,6 +129,25 @@ const formatTimeAgo = (dateString: string): string => {
 
 export default function ActivityPage() {
     const { data: activities = [], isLoading } = useRecentActivityQuery(50);
+    const deleteAllMutation = useDeleteAllActivityMutation();
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+    const handleClearAll = () => {
+        deleteAllMutation.mutate(undefined, {
+            onSuccess: (result) => {
+                setShowConfirmDialog(false);
+                if (result.success) {
+                    toast.success(`Cleared ${result.count} ${result.count === 1 ? 'activity' : 'activities'}`);
+                } else {
+                    toast.error(result.error || "Failed to clear activity");
+                }
+            },
+            onError: () => {
+                setShowConfirmDialog(false);
+                toast.error("Failed to clear activity");
+            },
+        });
+    };
 
     if (isLoading) {
         return <ActivityPageSkeleton />;
@@ -132,20 +155,92 @@ export default function ActivityPage() {
 
     return (
         <div className="flex flex-col h-full bg-white dark:bg-black overflow-hidden">
+            {/* Confirmation Dialog */}
+            {showConfirmDialog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    {/* Backdrop */}
+                    <div 
+                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                        onClick={() => !deleteAllMutation.isPending && setShowConfirmDialog(false)}
+                    />
+                    
+                    {/* Dialog */}
+                    <div className="relative bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 max-w-md w-full mx-4 shadow-2xl">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
+                                <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                                    Clear All Activity
+                                </h3>
+                                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                                    This action cannot be undone
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+                            Are you sure you want to delete all {activities.length} {activities.length === 1 ? 'activity' : 'activities'}? 
+                            This will permanently remove all activity history from your workspaces.
+                        </p>
+                        
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setShowConfirmDialog(false)}
+                                disabled={deleteAllMutation.isPending}
+                                className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleClearAll}
+                                disabled={deleteAllMutation.isPending}
+                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {deleteAllMutation.isPending ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Clearing...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 className="w-4 h-4" />
+                                        Clear All
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Page Header */}
             <div className="px-4 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800/80">
-                <div className="flex items-center gap-3">
-                    <Activity className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
-                    <div>
-                        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                            Activity
-                        </h1>
-                        <p className="text-sm text-zinc-700 dark:text-zinc-400">
-                            {activities.length > 0
-                                ? `${activities.length} recent activities`
-                                : "Recent team activity"}
-                        </p>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Activity className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
+                        <div>
+                            <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+                                Activity
+                            </h1>
+                            <p className="text-sm text-zinc-700 dark:text-zinc-400">
+                                {activities.length > 0
+                                    ? `${activities.length} recent activities`
+                                    : "Recent team activity"}
+                            </p>
+                        </div>
                     </div>
+                    
+                    {activities.length > 0 && (
+                        <button
+                            onClick={() => setShowConfirmDialog(true)}
+                            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-200 dark:border-red-500/20 rounded-lg transition-colors"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Clear All
+                        </button>
+                    )}
                 </div>
             </div>
 

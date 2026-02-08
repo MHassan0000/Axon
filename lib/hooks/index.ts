@@ -39,4 +39,5 @@ export {
     useInvalidateAnalytics,
     useInvalidateBoards,
     useInvalidateOnCardChange,
+    useDeleteAllActivityMutation,
 } from "./useDashboard";

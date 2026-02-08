@@ -86,6 +86,7 @@ export {
   getRecentActivity,
   getCardActivity,
   getBoardActivity,
+  deleteAllActivity,
 } from "./activity";
 
 // Authorization helpers
