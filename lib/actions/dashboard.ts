@@ -139,7 +139,7 @@ export async function getAllTeamMembers(): Promise<TeamMember[]> {
             users!inner (
                 id,
                 email,
-                full_name,
+                name,
                 avatar_url
             ),
             workspaces!inner (
@@ -155,12 +155,12 @@ export async function getAllTeamMembers(): Promise<TeamMember[]> {
 
     // Flatten and dedupe by user ID (user may be in multiple workspaces)
     const members: TeamMember[] = data.map((m) => {
-        const userData = m.users as unknown as { id: string; email: string; full_name: string | null; avatar_url: string | null };
+        const userData = m.users as unknown as { id: string; email: string; name: string | null; avatar_url: string | null };
         const workspaceData = m.workspaces as unknown as { name: string };
         return {
             id: userData.id,
             email: userData.email,
-            full_name: userData.full_name,
+            full_name: userData.name, // Map 'name' column to 'full_name' property
             avatar_url: userData.avatar_url,
             workspace_id: m.workspace_id,
             workspace_name: workspaceData.name,

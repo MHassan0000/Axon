@@ -438,3 +438,89 @@ export async function getWorkspaceMembers(
     role: m.role,
   }));
 }
+
+/**
+ * Invite a member to workspace by email
+ * Looks up the user by email and adds them to the workspace
+ */
+export async function inviteWorkspaceMemberByEmail(
+  workspaceId: string,
+  email: string,
+  role: "admin" | "member" = "member"
+): Promise<{ success: boolean; error?: string }> {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  const supabase = await createClient();
+
+  // Check if current user is owner or admin of the workspace
+  const { data: membership } = await supabase
+    .from("workspace_members")
+    .select("role")
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+    return { success: false, error: "You don't have permission to invite members" };
+  }
+
+  // Look up the user by email
+  const { data: targetUser } = await supabase
+    .from("users")
+    .select("id")
+    .eq("email", email.toLowerCase().trim())
+    .single();
+
+  if (!targetUser) {
+    return { success: false, error: "No user found with this email. They need to sign up first." };
+  }
+
+  // Check if user is already a member
+  const { data: existingMembership } = await supabase
+    .from("workspace_members")
+    .select("user_id")
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", targetUser.id)
+    .single();
+
+  if (existingMembership) {
+    return { success: false, error: "This user is already a member of the workspace" };
+  }
+
+  // Add the user to the workspace
+  const { error: insertError } = await supabase
+    .from("workspace_members")
+    .insert({
+      workspace_id: workspaceId,
+      user_id: targetUser.id,
+      role,
+    });
+
+  if (insertError) {
+    console.error("Error adding member:", insertError);
+    return { success: false, error: "Failed to add member" };
+  }
+
+  // Send notification to the new member
+  const { data: workspace } = await supabase
+    .from("workspaces")
+    .select("name")
+    .eq("id", workspaceId)
+    .single();
+
+  if (workspace) {
+    await supabase.from("notifications").insert({
+      user_id: targetUser.id,
+      type: "workspace_invite",
+      title: "You were added to a workspace",
+      message: `${user.name || "Someone"} added you to the workspace "${workspace.name}"`,
+      link: `/dashboard/workspace/${workspaceId}`,
+    });
+  }
+
+  return { success: true };
+}

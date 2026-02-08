@@ -23,6 +23,7 @@ import {
     removeWorkspaceMember,
     addWorkspaceMember,
     searchUsers,
+    inviteWorkspaceMemberByEmail,
 } from "@/lib/actions";
 import { workspaceNameSchema, workspaceDescriptionSchema } from "@/lib/validations";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -163,6 +164,33 @@ export function WorkspaceSettingsModal({
             setAddingMember(false);
         }
     };
+
+    // Invite member by email
+    const handleInviteByEmail = async () => {
+        const email = searchQuery.trim().toLowerCase();
+        if (!email) return;
+
+        setAddingMember(true);
+        try {
+            const result = await inviteWorkspaceMemberByEmail(workspace.id, email);
+            if (result.success) {
+                const m = await getWorkspaceMembers(workspace.id);
+                setMembers(m);
+                setSearchQuery("");
+                setSearchResults([]);
+                toast.success(`Added ${email} to workspace`);
+            } else {
+                toast.error(result.error || "Failed to invite member");
+            }
+        } catch {
+            toast.error("Failed to invite member");
+        } finally {
+            setAddingMember(false);
+        }
+    };
+
+    // Check if search query looks like an email
+    const isEmailQuery = searchQuery.includes("@") && searchQuery.includes(".");
 
     // Remove member - show confirmation dialog
     const handleRemoveMember = (userId: string, userName: string | null) => {
@@ -355,6 +383,34 @@ export function WorkspaceSettingsModal({
                                                     <Plus className="w-4 h-4 text-zinc-400" />
                                                 </button>
                                             ))}
+                                        </div>
+                                    )}
+
+                                    {/* Invite by Email - show when email is entered but no results found */}
+                                    {isEmailQuery && searchResults.length === 0 && !searching && searchQuery.trim().length >= 3 && (
+                                        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg z-10">
+                                            <button
+                                                onClick={handleInviteByEmail}
+                                                disabled={addingMember}
+                                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-left transition-colors"
+                                            >
+                                                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                                    <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                                                        Invite by email
+                                                    </p>
+                                                    <p className="text-xs text-zinc-500 truncate">
+                                                        {searchQuery.trim()}
+                                                    </p>
+                                                </div>
+                                                {addingMember ? (
+                                                    <Loader2 className="w-4 h-4 text-zinc-400 animate-spin" />
+                                                ) : (
+                                                    <Plus className="w-4 h-4 text-blue-500" />
+                                                )}
+                                            </button>
                                         </div>
                                     )}
                                 </div>
