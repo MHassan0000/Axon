@@ -36,7 +36,7 @@ import {
     uploadAttachment,
     deleteAttachment,
 } from "@/lib/actions";
-import { useInvalidateCalendar } from "@/lib/hooks/useDashboard";
+import { useInvalidateCalendar, useInvalidateActivity } from "@/lib/hooks/useDashboard";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type {
     CardWithRelations,
@@ -109,6 +109,8 @@ export function CardModal({
 
     // Calendar cache invalidation
     const invalidateCalendar = useInvalidateCalendar();
+    // Activity cache invalidation
+    const invalidateActivity = useInvalidateActivity();
 
     // Refs for click outside
     const labelPickerRef = useRef<HTMLDivElement>(null);
@@ -208,6 +210,8 @@ export function CardModal({
                 // Refresh comments to get full user data
                 const c = await getComments(card.id);
                 setComments(c as CommentWithUser[]);
+                // Invalidate activity cache since comment adds activity
+                invalidateActivity();
             }
         } catch (error) {
             console.error("Error adding comment:", error);
@@ -252,6 +256,8 @@ export function CardModal({
             } else {
                 await addLabelToCard(card.id, label.id);
             }
+            // Invalidate activity cache since label changes log activity
+            invalidateActivity();
         } catch (error) {
             console.error("Error toggling label:", error);
             // Rollback
@@ -290,6 +296,8 @@ export function CardModal({
             } else {
                 await assignUserToCard(card.id, user.id);
             }
+            // Invalidate activity cache since assignee changes log activity
+            invalidateActivity();
         } catch (error) {
             console.error("Error toggling assignee:", error);
             // Rollback
@@ -326,6 +334,8 @@ export function CardModal({
                 if (attachment) {
                     setAttachments(prev => [attachment, ...prev]);
                     onUpdate({ ...card, attachments_count: (card.attachments_count || 0) + 1 });
+                    // Invalidate activity cache since attachment upload logs activity
+                    invalidateActivity();
                 }
             } catch (error) {
                 console.error("Error uploading file:", error);

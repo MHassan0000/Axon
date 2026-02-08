@@ -184,3 +184,67 @@ export function useInvalidateCalendar() {
         queryClient.invalidateQueries({ queryKey: queryKeys.cards.withDueDates() });
     };
 }
+
+/**
+ * Hook to invalidate activity cache
+ * Use this after operations that create activity logs (comments, labels, assignees, etc.)
+ */
+export function useInvalidateActivity() {
+    const queryClient = useQueryClient();
+    
+    return () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.activity.all });
+    };
+}
+
+/**
+ * Hook to invalidate analytics and dashboard stats caches
+ * Use this after operations that affect analytics (card create/delete/complete, board changes)
+ */
+export function useInvalidateAnalytics() {
+    const queryClient = useQueryClient();
+    
+    return () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.analytics() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats() });
+    };
+}
+
+/**
+ * Hook to invalidate all board-related caches
+ * Use this after board create/update/delete operations
+ */
+export function useInvalidateBoards() {
+    const queryClient = useQueryClient();
+    
+    return () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.boards.all });
+    };
+}
+
+/**
+ * Comprehensive hook to invalidate caches when card data changes
+ * Use this after card operations (create, delete, complete, etc.)
+ */
+export function useInvalidateOnCardChange() {
+    const queryClient = useQueryClient();
+    
+    return (options?: { 
+        activity?: boolean; 
+        analytics?: boolean; 
+        calendar?: boolean;
+    }) => {
+        const { activity = true, analytics = true, calendar = false } = options || {};
+        
+        if (activity) {
+            queryClient.invalidateQueries({ queryKey: queryKeys.activity.all });
+        }
+        if (analytics) {
+            queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.analytics() });
+            queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats() });
+        }
+        if (calendar) {
+            queryClient.invalidateQueries({ queryKey: queryKeys.cards.withDueDates() });
+        }
+    };
+}

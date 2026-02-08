@@ -55,6 +55,7 @@ import {
     updateCard,
 } from "@/lib/actions";
 import { useBoardRealtime } from "@/lib/hooks/useRealtime";
+import { useInvalidateOnCardChange } from "@/lib/hooks/useDashboard";
 import { CardModal } from "@/components/dashboard-components/CardModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { BoardPageSkeleton } from "@/components/ui/Skeleton";
@@ -89,6 +90,9 @@ export default function BoardPage() {
     const params = useParams();
     const router = useRouter();
     const boardId = params.id as string;
+
+    // Cache invalidation hook for card changes
+    const invalidateOnCardChange = useInvalidateOnCardChange();
 
     const [board, setBoard] = useState<BoardWithLists | null>(null);
     const [loading, setLoading] = useState(true);
@@ -506,6 +510,8 @@ export default function BoardPage() {
                         ),
                     };
                 });
+                // Invalidate analytics/activity caches after card creation
+                invalidateOnCardChange({ activity: true, analytics: true });
             } else {
                 // Remove temp card on failure
                 setBoard((prev) => {
@@ -537,7 +543,7 @@ export default function BoardPage() {
             });
             toast.error("Failed to create card");
         }
-    }, [board, newCardTitle]);
+    }, [board, newCardTitle, invalidateOnCardChange]);
 
     // Delete Card Handler
     const handleDeleteCard = useCallback(async (cardId: string, listId: string) => {
@@ -557,6 +563,8 @@ export default function BoardPage() {
 
             await deleteCard(cardId);
             toast.success("Card deleted");
+            // Invalidate analytics/activity caches after card deletion
+            invalidateOnCardChange({ activity: true, analytics: true });
         } catch (error) {
             console.error("Error deleting card:", error);
             toast.error("Failed to delete card");
@@ -564,7 +572,7 @@ export default function BoardPage() {
             const b = await getBoardWithLists(boardId);
             setBoard(b);
         }
-    }, [board, boardId]);
+    }, [board, boardId, invalidateOnCardChange]);
 
     // Delete List Handler - show confirmation dialog
     const handleDeleteList = useCallback((listId: string) => {
@@ -629,6 +637,8 @@ export default function BoardPage() {
 
         try {
             await updateCard(card.id, { is_complete: newIsComplete });
+            // Invalidate analytics (completion affects stats) and calendar (due date display changes)
+            invalidateOnCardChange({ activity: true, analytics: true, calendar: true });
         } catch (error) {
             console.error("Error toggling card complete:", error);
             toast.error("Failed to update card");
@@ -646,7 +656,7 @@ export default function BoardPage() {
                 setSelectedCard({ ...selectedCard, is_complete: card.is_complete });
             }
         }
-    }, [board, selectedCard]);
+    }, [board, selectedCard, invalidateOnCardChange]);
 
     // Loading state
     if (loading) {

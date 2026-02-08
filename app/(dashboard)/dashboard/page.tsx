@@ -17,7 +17,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { syncCurrentUser, createWorkspace, createBoard, uploadBoardBackground, deleteWorkspace } from "@/lib/actions";
 import { useWorkspaces } from "@/lib/context/WorkspaceContext";
-import { useBoardsQuery, useDashboardStatsQuery } from "@/lib/hooks";
+import { useBoardsQuery, useDashboardStatsQuery, useInvalidateBoards, useInvalidateAnalytics } from "@/lib/hooks";
 import { workspaceNameSchema, boardNameSchema, boardColorSchema } from "@/lib/validations";
 import { DashboardPageSkeleton } from "@/components/ui/Skeleton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -68,6 +68,10 @@ export default function DashboardPage() {
     
     // Use React Query for stats - cached for 30s
     const { data: stats } = useDashboardStatsQuery();
+    
+    // Cache invalidation hooks
+    const invalidateBoards = useInvalidateBoards();
+    const invalidateAnalytics = useInvalidateAnalytics();
     
     const [creating, setCreating] = useState(false);
     const [showCreateWorkspaceModal, setShowCreateWorkspaceModal] = useState(false);
@@ -149,6 +153,9 @@ export default function DashboardPage() {
             if (success) {
                 removeWorkspace(deleteWorkspaceConfirm.workspaceId);
                 toast.success("Workspace deleted successfully");
+                // Invalidate boards and analytics caches (boards belonging to deleted workspace)
+                invalidateBoards();
+                invalidateAnalytics();
             } else {
                 toast.error("Failed to delete workspace");
             }
@@ -239,6 +246,9 @@ export default function DashboardPage() {
                 setNewBoardColor("#3b82f6");
                 setNewBoardImage(null);
                 toast.success("Board created successfully");
+                // Invalidate boards and analytics caches
+                invalidateBoards();
+                invalidateAnalytics();
                 router.push(`/dashboard/board/${result.board.id}`);
             } else {
                 toast.error(result.error || "Failed to create board");
