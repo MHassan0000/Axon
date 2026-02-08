@@ -36,7 +36,7 @@ export default function PricingPage() {
                         transition={{ duration: 0.5 }}
                     >
                         <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-indigo-600 dark:text-indigo-400 text-sm font-medium mb-6">
-                            <Sparkles className="w-4 h-4" />
+
                             Simple, transparent pricing
                         </div>
                         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-zinc-900 dark:text-white mb-6">

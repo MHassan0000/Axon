@@ -38,7 +38,7 @@ export default function Navbar() {
                 alt="Axon Logo"
                 width={50}
                 height={50}
-                className="object-contain mt-2 w-8 h-8 sm:w-10 sm:h-10 md:w-12.5 md:h-12.5"
+                className="object-contain  w-8 h-8 sm:w-10 sm:h-10 md:w-12.5 md:h-12.5"
               />
               <span className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
                 Axon
@@ -62,48 +62,48 @@ export default function Navbar() {
             <div className="hidden md:flex items-center gap-6 lg:gap-8">
               <MenuItem setActive={setActive} active={active} item="Features">
                 <div className="flex flex-col space-y-4 text-sm">
-                  <HoveredLink href="/boards">Board Management</HoveredLink>
-                  <HoveredLink href="/tasks">Task Tracking</HoveredLink>
-                  <HoveredLink href="/collaboration">Team Collaboration</HoveredLink>
-                  <HoveredLink href="/analytics">Analytics Dashboard</HoveredLink>
+                  <HoveredLink href="/features">All Features</HoveredLink>
+                  <HoveredLink href="/features#boards">Board Management</HoveredLink>
+                  <HoveredLink href="/features#collaboration">Team Collaboration</HoveredLink>
+                  <HoveredLink href="/features#calendar">Calendar & Due Dates</HoveredLink>
                 </div>
               </MenuItem>
 
               <MenuItem setActive={setActive} active={active} item="Solutions">
                 <div className="text-sm grid grid-cols-2 gap-10 p-4">
                   <ProductItem
-                    title="Project Management"
-                    href="/solutions/projects"
-                    src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=200&fit=crop"
-                    description="Organize projects with powerful boards and workflows"
-                  />
-                  <ProductItem
-                    title="Team Workspace"
-                    href="/solutions/teams"
+                    title="For Teams"
+                    href="/solutions"
                     src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=200&fit=crop"
                     description="Collaborate seamlessly with your entire team"
                   />
                   <ProductItem
-                    title="Automation"
-                    href="/solutions/automation"
-                    src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop"
-                    description="Automate workflows and boost productivity"
+                    title="For Startups"
+                    href="/solutions"
+                    src="https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=400&h=200&fit=crop"
+                    description="Move fast without sacrificing organization"
                   />
                   <ProductItem
-                    title="Integrations"
-                    href="/solutions/integrations"
-                    src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=200&fit=crop"
-                    description="Connect with your favorite tools and services"
+                    title="For Developers"
+                    href="/solutions"
+                    src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=200&fit=crop"
+                    description="Track bugs, sprints, and releases"
+                  />
+                  <ProductItem
+                    title="For Enterprise"
+                    href="/solutions"
+                    src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=200&fit=crop"
+                    description="Enterprise-grade security and control"
                   />
                 </div>
               </MenuItem>
 
               <MenuItem setActive={setActive} active={active} item="Resources">
                 <div className="flex flex-col space-y-4 text-sm">
-                  <HoveredLink href="/docs">Documentation</HoveredLink>
-                  <HoveredLink href="/guides">Getting Started</HoveredLink>
-                  <HoveredLink href="/blog">Blog</HoveredLink>
-                  <HoveredLink href="/support">Support Center</HoveredLink>
+                  <HoveredLink href="/resources">Resource Center</HoveredLink>
+                  <HoveredLink href="/resources#getting-started">Getting Started</HoveredLink>
+                  <HoveredLink href="/resources#guides">User Guides</HoveredLink>
+                  <HoveredLink href="/resources#api">API Documentation</HoveredLink>
                 </div>
               </MenuItem>
 
@@ -156,7 +156,7 @@ export default function Navbar() {
               <div className="flex flex-col space-y-3 sm:space-y-4">
                 {/* Mobile Menu Items */}
                 <Link
-                  href="/boards"
+                  href="/features"
                   className="text-zinc-900 dark:text-white hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -170,7 +170,7 @@ export default function Navbar() {
                   Solutions
                 </Link>
                 <Link
-                  href="/docs"
+                  href="/resources"
                   className="text-zinc-900 dark:text-white hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >

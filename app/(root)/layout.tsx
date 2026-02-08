@@ -1,6 +1,6 @@
 import React from "react";
 import Navbar from "@/components/shared/Navbar";
-// import Footer from "@/components/ui/shared/Footer";
+import Footer from "@/components/shared/Footer"
 
 export default function DashboardLayout({
     children,
@@ -13,7 +13,7 @@ export default function DashboardLayout({
                 <Navbar />
             </div>
             <div className="flex-1">{children}</div>
-            {/* <Footer /> */}
+            <Footer />
         </main>
     )
 }
