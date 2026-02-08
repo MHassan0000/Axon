@@ -38,7 +38,7 @@ export default function Navbar() {
                 alt="Axon Logo"
                 width={50}
                 height={50}
-                className="object-contain mt-2 w-8 h-8 sm:w-10 sm:h-10 md:w-[50px] md:h-[50px]"
+                className="object-contain mt-2 w-8 h-8 sm:w-10 sm:h-10 md:w-12.5 md:h-12.5"
               />
               <span className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
                 Axon

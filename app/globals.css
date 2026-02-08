@@ -5,11 +5,13 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
   @apply bg-[#0a0a0b] text-zinc-100 transition-colors duration-300;
 }
 

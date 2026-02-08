@@ -10,7 +10,7 @@ import Footer from "@/components/shared/Footer";
 
 export default function Home() {
   return (
-    <main className="relative w-full flex flex-col">
+    <main className="relative w-full flex flex-col overflow-x-hidden">
       <section className="flex flex-col gap-20">
         <Navbar />
         <Hero />
