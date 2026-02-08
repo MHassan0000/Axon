@@ -1,16 +1,22 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bell, Check, Trash2, X, Clock, User, MessageSquare, AlertCircle } from "lucide-react";
+import { Bell, Check, Trash2, X, Clock, User, MessageSquare, AlertCircle, Users, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     getNotifications,
     getUnreadCount,
     markAsRead,
     markAllAsRead,
     deleteNotification,
-} from "@/lib/actions/notifications";
+    acceptWorkspaceInvite,
+    declineWorkspaceInvite,
+} from "@/lib/actions";
+import { queryKeys } from "@/lib/hooks/queryKeys";
+import { useWorkspaces } from "@/lib/context/WorkspaceContext";
 import type { Notification } from "@/lib/types/database";
 
 export default function NotificationBell() {
@@ -18,7 +24,10 @@ export default function NotificationBell() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [processingInvite, setProcessingInvite] = useState<string | null>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const queryClient = useQueryClient();
+    const { refreshWorkspaces } = useWorkspaces();
 
     // Fetch notifications on mount
     useEffect(() => {
@@ -78,6 +87,73 @@ export default function NotificationBell() {
         }
     };
 
+    const handleAcceptInvite = async (notification: Notification) => {
+        const inviteId = notification.metadata?.invite_id;
+        if (!inviteId) {
+            toast.error("Invalid invitation");
+            return;
+        }
+
+        setProcessingInvite(notification.id);
+        try {
+            const result = await acceptWorkspaceInvite(inviteId);
+            if (result.success) {
+                toast.success("You have joined the workspace!");
+                // Remove the notification
+                await deleteNotification(notification.id);
+                setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+                if (!notification.is_read) {
+                    setUnreadCount((prev) => Math.max(0, prev - 1));
+                }
+                // Refresh WorkspaceContext (for sidebar to show new workspace)
+                await refreshWorkspaces();
+                // Invalidate React Query caches
+                queryClient.invalidateQueries({ queryKey: queryKeys.team.members() });
+                queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all });
+                queryClient.invalidateQueries({ queryKey: queryKeys.boards.all });
+                queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats() });
+                // Navigate to the workspace
+                if (result.workspaceId) {
+                    window.location.href = `/dashboard/workspace/${result.workspaceId}`;
+                }
+            } else {
+                toast.error(result.error || "Failed to accept invitation");
+            }
+        } catch {
+            toast.error("Failed to accept invitation");
+        } finally {
+            setProcessingInvite(null);
+        }
+    };
+
+    const handleDeclineInvite = async (notification: Notification) => {
+        const inviteId = notification.metadata?.invite_id;
+        if (!inviteId) {
+            toast.error("Invalid invitation");
+            return;
+        }
+
+        setProcessingInvite(notification.id);
+        try {
+            const result = await declineWorkspaceInvite(inviteId);
+            if (result.success) {
+                toast.success("Invitation declined");
+                // Remove the notification
+                await deleteNotification(notification.id);
+                setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+                if (!notification.is_read) {
+                    setUnreadCount((prev) => Math.max(0, prev - 1));
+                }
+            } else {
+                toast.error(result.error || "Failed to decline invitation");
+            }
+        } catch {
+            toast.error("Failed to decline invitation");
+        } finally {
+            setProcessingInvite(null);
+        }
+    };
+
     const getNotificationIcon = (type: Notification["type"]) => {
         switch (type) {
             case "card_assigned":
@@ -89,9 +165,19 @@ export default function NotificationBell() {
                 return <Clock className="w-4 h-4 text-amber-500" />;
             case "due_overdue":
                 return <AlertCircle className="w-4 h-4 text-red-500" />;
+            case "workspace_invite":
+                return <Users className="w-4 h-4 text-indigo-500" />;
             default:
                 return <Bell className="w-4 h-4 text-zinc-500" />;
         }
+    };
+
+    // Check if a notification is an actionable invite (has metadata with invite_id)
+    const isActionableInvite = (notification: Notification): boolean => {
+        return (
+            notification.type === "workspace_invite" &&
+            !!notification.metadata?.invite_id
+        );
     };
 
     return (
@@ -161,7 +247,7 @@ export default function NotificationBell() {
 
                                         {/* Content */}
                                         <div className="flex-1 min-w-0">
-                                            {notification.link ? (
+                                            {notification.link && !isActionableInvite(notification) ? (
                                                 <Link
                                                     href={notification.link}
                                                     onClick={() => {
@@ -198,27 +284,55 @@ export default function NotificationBell() {
                                                     addSuffix: true,
                                                 })}
                                             </p>
+
+                                            {/* Accept/Decline buttons for workspace invites */}
+                                            {isActionableInvite(notification) && (
+                                                <div className="flex gap-2 mt-2">
+                                                    <button
+                                                        onClick={() => handleAcceptInvite(notification)}
+                                                        disabled={processingInvite === notification.id}
+                                                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors disabled:opacity-50"
+                                                    >
+                                                        {processingInvite === notification.id ? (
+                                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                                        ) : (
+                                                            <CheckCircle className="w-3 h-3" />
+                                                        )}
+                                                        Accept
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeclineInvite(notification)}
+                                                        disabled={processingInvite === notification.id}
+                                                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 rounded-md transition-colors disabled:opacity-50"
+                                                    >
+                                                        <XCircle className="w-3 h-3" />
+                                                        Decline
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
 
-                                        {/* Actions */}
-                                        <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-start gap-1">
-                                            {!notification.is_read && (
+                                        {/* Actions (only show for non-invite notifications or read invites) */}
+                                        {!isActionableInvite(notification) && (
+                                            <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-start gap-1">
+                                                {!notification.is_read && (
+                                                    <button
+                                                        onClick={() => handleMarkAsRead(notification.id)}
+                                                        className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                                                        title="Mark as read"
+                                                    >
+                                                        <Check className="w-3.5 h-3.5 text-zinc-500" />
+                                                    </button>
+                                                )}
                                                 <button
-                                                    onClick={() => handleMarkAsRead(notification.id)}
+                                                    onClick={() => handleDelete(notification.id)}
                                                     className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                                                    title="Mark as read"
+                                                    title="Delete"
                                                 >
-                                                    <Check className="w-3.5 h-3.5 text-zinc-500" />
+                                                    <Trash2 className="w-3.5 h-3.5 text-zinc-500" />
                                                 </button>
-                                            )}
-                                            <button
-                                                onClick={() => handleDelete(notification.id)}
-                                                className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                                                title="Delete"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5 text-zinc-500" />
-                                            </button>
-                                        </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Unread indicator */}

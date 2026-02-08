@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { AlertTriangle, Trash2, UserMinus, X, Loader2 } from "lucide-react";
+import { AlertTriangle, Trash2, UserMinus, X, Loader2, LogOut } from "lucide-react";
 
 export type ConfirmDialogVariant = "danger" | "warning" | "info";
 
@@ -14,7 +14,7 @@ interface ConfirmDialogProps {
     confirmText?: string;
     cancelText?: string;
     variant?: ConfirmDialogVariant;
-    icon?: "trash" | "warning" | "user-remove";
+    icon?: "trash" | "warning" | "user-remove" | "logout";
     isLoading?: boolean;
 }
 
@@ -48,6 +48,7 @@ const iconComponents = {
     trash: Trash2,
     warning: AlertTriangle,
     "user-remove": UserMinus,
+    logout: LogOut,
 };
 
 export function ConfirmDialog({

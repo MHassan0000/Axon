@@ -10,6 +10,7 @@ import {
     Loader2,
     LayoutGrid,
     Settings,
+    Users,
     Image as ImageIcon,
     X,
     Trash2,
@@ -18,6 +19,7 @@ import { toast } from "sonner";
 import { getWorkspaceWithBoards, createBoard, uploadBoardBackground, deleteBoard } from "@/lib/actions";
 import { boardNameSchema, boardColorSchema } from "@/lib/validations";
 import { WorkspaceSettingsModal } from "@/components/dashboard-components/WorkspaceSettingsModal";
+import { WorkspaceMembersModal } from "@/components/dashboard-components/WorkspaceMembersModal";
 import { WorkspacePageSkeleton } from "@/components/ui/Skeleton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { WorkspaceWithBoards, Board } from "@/lib/types/database";
@@ -30,6 +32,7 @@ export default function WorkspacePage() {
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [showMembersModal, setShowMembersModal] = useState(false);
     const [newBoardName, setNewBoardName] = useState("");
     const [newBoardColor, setNewBoardColor] = useState("#3b82f6");
     const [newBoardImage, setNewBoardImage] = useState<string | null>(null);
@@ -226,6 +229,13 @@ export default function WorkspacePage() {
 
                 <div className="flex items-center gap-2 ml-auto sm:ml-0">
                     <button
+                        onClick={() => setShowMembersModal(true)}
+                        className="p-1.5 sm:p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                        title="Members"
+                    >
+                        <Users className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 dark:text-zinc-400" />
+                    </button>
+                    <button
                         onClick={() => setShowSettingsModal(true)}
                         className="p-1.5 sm:p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                         title="Workspace Settings"
@@ -414,6 +424,14 @@ export default function WorkspacePage() {
                         setWorkspace({ ...workspace, ...updates });
                         setShowSettingsModal(false);
                     }}
+                />
+            )}
+
+            {/* Workspace Members Modal */}
+            {showMembersModal && (
+                <WorkspaceMembersModal
+                    workspace={workspace}
+                    onClose={() => setShowMembersModal(false)}
                 />
             )}
 

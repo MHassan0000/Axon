@@ -21,6 +21,13 @@ export {
   removeWorkspaceMember,
   getWorkspaceMembers,
   inviteWorkspaceMemberByEmail,
+  sendWorkspaceInvite,
+  acceptWorkspaceInvite,
+  declineWorkspaceInvite,
+  leaveWorkspace,
+  getWorkspacePendingInvites,
+  cancelWorkspaceInvite,
+  getUserWorkspaceRole,
 } from "./workspaces";
 
 // Board actions

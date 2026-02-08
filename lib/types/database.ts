@@ -142,6 +142,41 @@ export interface Notification {
   link: string | null;
   is_read: boolean;
   created_at: string;
+  // For workspace invites, this stores the invite_id to enable accept/decline
+  metadata?: {
+    invite_id?: string;
+    workspace_id?: string;
+    workspace_name?: string;
+  } | null;
+}
+
+export interface WorkspaceInvite {
+  id: string;
+  workspace_id: string;
+  inviter_id: string;
+  invitee_id: string;
+  status: 'pending' | 'accepted' | 'declined';
+  created_at: string;
+  responded_at: string | null;
+}
+
+export interface WorkspaceInviteWithDetails extends WorkspaceInvite {
+  workspace?: {
+    id: string;
+    name: string;
+  };
+  inviter?: {
+    id: string;
+    name: string | null;
+    email: string;
+    avatar_url: string | null;
+  };
+  invitee?: {
+    id: string;
+    name: string | null;
+    email: string;
+    avatar_url: string | null;
+  };
 }
 
 export interface NotificationPreferences {
