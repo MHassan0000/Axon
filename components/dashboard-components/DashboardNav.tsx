@@ -196,11 +196,11 @@ export default function DashboardNav() {
 
             {/* Mobile Search Overlay */}
             {showMobileSearch && (
-                <div className="md:hidden fixed inset-0 z-60 bg-white dark:bg-zinc-950">
+                <div className="md:hidden fixed inset-0 z-[200] bg-white dark:bg-zinc-950">
                     <div className="flex items-center gap-3 p-4 border-b border-zinc-200 dark:border-zinc-800">
                         <button
                             onClick={() => setShowMobileSearch(false)}
-                            className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                            className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0"
                         >
                             <X className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
                         </button>
