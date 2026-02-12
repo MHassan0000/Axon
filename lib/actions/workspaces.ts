@@ -24,13 +24,9 @@ const addWorkspaceMemberSchema = z.object({
   role: z.enum(["admin", "member"]).optional().default("member"),
 });
 
-/**
- * Create a new workspace
- */
 export async function createWorkspace(
   input: CreateWorkspaceInput
 ): Promise<{ workspace: Workspace | null; error?: string }> {
-  // Validate input
   const validation = validateInput(createWorkspaceSchema, input);
   if (!validation.success) {
     return { workspace: null, error: validation.error };
@@ -45,7 +41,6 @@ export async function createWorkspace(
 
   const supabase = await createClient();
 
-  // Check plan limits
   const { count: workspaceCount } = await supabase
     .from("workspaces")
     .select("*", { count: "exact", head: true })
@@ -56,7 +51,6 @@ export async function createWorkspace(
     return { workspace: null, error: canCreate.reason };
   }
 
-  // Create the workspace
   const { data: workspace, error: workspaceError } = await supabase
     .from("workspaces")
     .insert({
@@ -71,7 +65,6 @@ export async function createWorkspace(
     return { workspace: null, error: "Failed to create workspace" };
   }
 
-  // Add owner as workspace member
   await supabase
     .from("workspace_members")
     .insert({
@@ -83,9 +76,6 @@ export async function createWorkspace(
   return { workspace };
 }
 
-/**
- * Get all workspaces for the current user
- */
 export async function getWorkspaces(): Promise<Workspace[]> {
   const user = await getCurrentUser();
   
@@ -95,7 +85,6 @@ export async function getWorkspaces(): Promise<Workspace[]> {
 
   const supabase = await createClient();
 
-  // Get workspaces where user is a member
   const { data: memberships, error: memberError } = await supabase
     .from("workspace_members")
     .select("workspace_id")
@@ -121,9 +110,6 @@ export async function getWorkspaces(): Promise<Workspace[]> {
   return workspaces;
 }
 
-/**
- * Get a single workspace with its boards
- */
 export async function getWorkspaceWithBoards(
   workspaceId: string
 ): Promise<WorkspaceWithBoards | null> {
@@ -135,7 +121,6 @@ export async function getWorkspaceWithBoards(
 
   const supabase = await createClient();
 
-  // Check membership
   const { data: membership } = await supabase
     .from("workspace_members")
     .select("*")
@@ -148,7 +133,6 @@ export async function getWorkspaceWithBoards(
     return null;
   }
 
-  // Get workspace with boards
   const { data: workspace, error } = await supabase
     .from("workspaces")
     .select("*")
@@ -172,21 +156,16 @@ export async function getWorkspaceWithBoards(
   };
 }
 
-/**
- * Update a workspace
- */
 export async function updateWorkspace(
   workspaceId: string,
   input: UpdateWorkspaceInput
 ): Promise<Workspace | null> {
-  // Validate workspaceId
   const idValidation = z.string().uuid("Invalid workspace ID").safeParse(workspaceId);
   if (!idValidation.success) {
     console.error("Invalid workspace ID");
     return null;
   }
 
-  // Validate input
   const validation = validateInput(updateWorkspaceSchema, input);
   if (!validation.success) {
     console.error("Validation failed:", validation.error);
@@ -202,7 +181,6 @@ export async function updateWorkspace(
 
   const supabase = await createClient();
 
-  // Check if user is owner or admin
   const { data: membership } = await supabase
     .from("workspace_members")
     .select("role")
@@ -230,9 +208,6 @@ export async function updateWorkspace(
   return workspace;
 }
 
-/**
- * Delete a workspace (owner only)
- */
 export async function deleteWorkspace(workspaceId: string): Promise<boolean> {
   const user = await getCurrentUser();
   
@@ -242,7 +217,6 @@ export async function deleteWorkspace(workspaceId: string): Promise<boolean> {
 
   const supabase = await createClient();
 
-  // Check if user is owner
   const { data: workspace } = await supabase
     .from("workspaces")
     .select("owner_id")
@@ -267,15 +241,11 @@ export async function deleteWorkspace(workspaceId: string): Promise<boolean> {
   return true;
 }
 
-/**
- * Add a member to workspace
- */
 export async function addWorkspaceMember(
   workspaceId: string,
   userId: string,
   role: "admin" | "member" = "member"
 ): Promise<WorkspaceMember | null> {
-  // Validate input
   const validation = addWorkspaceMemberSchema.safeParse({ workspaceId, userId, role });
   if (!validation.success) {
     console.error("Validation failed:", validation.error.issues[0]?.message);
@@ -290,7 +260,6 @@ export async function addWorkspaceMember(
 
   const supabase = await createClient();
 
-  // Check if current user is owner or admin
   const { data: membership } = await supabase
     .from("workspace_members")
     .select("role")
@@ -338,9 +307,6 @@ export async function addWorkspaceMember(
   return newMember;
 }
 
-/**
- * Remove a member from workspace
- */
 export async function removeWorkspaceMember(
   workspaceId: string,
   userId: string
@@ -353,7 +319,6 @@ export async function removeWorkspaceMember(
 
   const supabase = await createClient();
 
-  // Check if current user is owner or admin
   const { data: membership } = await supabase
     .from("workspace_members")
     .select("role")
@@ -389,7 +354,6 @@ export async function removeWorkspaceMember(
     return false;
   }
 
-  // Delete any existing invite records for this user/workspace
   // This allows the user to be re-invited later
   await supabase
     .from("workspace_invites")
@@ -400,9 +364,6 @@ export async function removeWorkspaceMember(
   return true;
 }
 
-/**
- * Get all members of a workspace
- */
 export async function getWorkspaceMembers(
   workspaceId: string
 ): Promise<{ id: string; name: string | null; email: string; avatar_url: string | null; role: string }[]> {
@@ -415,7 +376,6 @@ export async function getWorkspaceMembers(
 
   const supabase = await createClient();
 
-  // Verify user is a member of this workspace
   const { data: membership } = await supabase
     .from("workspace_members")
     .select("role")
@@ -447,10 +407,6 @@ export async function getWorkspaceMembers(
   }));
 }
 
-/**
- * Send a workspace invite to a user by email
- * Creates a pending invite and sends a notification that can be accepted/declined
- */
 export async function sendWorkspaceInvite(
   workspaceId: string,
   email: string
@@ -463,7 +419,6 @@ export async function sendWorkspaceInvite(
 
   const supabase = await createClient();
 
-  // Check if current user is owner or admin of the workspace
   const { data: membership } = await supabase
     .from("workspace_members")
     .select("role")
@@ -491,7 +446,6 @@ export async function sendWorkspaceInvite(
     return { success: false, error: "You can't invite yourself" };
   }
 
-  // Check if user is already a member
   const { data: existingMembership } = await supabase
     .from("workspace_members")
     .select("user_id")
@@ -503,7 +457,6 @@ export async function sendWorkspaceInvite(
     return { success: false, error: "This user is already a member of the workspace" };
   }
 
-  // Check if there's already a pending invite
   const { data: existingInvite } = await supabase
     .from("workspace_invites")
     .select("id, status")
@@ -516,7 +469,6 @@ export async function sendWorkspaceInvite(
     return { success: false, error: "An invite has already been sent to this user" };
   }
 
-  // Get workspace name
   const { data: workspace } = await supabase
     .from("workspaces")
     .select("name")
@@ -527,7 +479,6 @@ export async function sendWorkspaceInvite(
     return { success: false, error: "Workspace not found" };
   }
 
-  // Create the invite
   const { data: invite, error: inviteError } = await supabase
     .from("workspace_invites")
     .insert({
@@ -561,9 +512,6 @@ export async function sendWorkspaceInvite(
   return { success: true };
 }
 
-/**
- * Accept a workspace invite
- */
 export async function acceptWorkspaceInvite(
   inviteId: string
 ): Promise<{ success: boolean; error?: string; workspaceId?: string }> {
@@ -575,7 +523,6 @@ export async function acceptWorkspaceInvite(
 
   const supabase = await createClient();
 
-  // Get the invite
   const { data: invite, error: inviteError } = await supabase
     .from("workspace_invites")
     .select("*, workspaces(name)")
@@ -588,7 +535,6 @@ export async function acceptWorkspaceInvite(
     return { success: false, error: "Invite not found or already responded" };
   }
 
-  // Add user to workspace members
   const { error: memberError } = await supabase
     .from("workspace_members")
     .insert({
@@ -600,7 +546,6 @@ export async function acceptWorkspaceInvite(
   if (memberError) {
     // Could be duplicate - user might already be a member
     if (memberError.code === "23505") {
-      // Update invite status anyway
       await supabase
         .from("workspace_invites")
         .update({ status: "accepted", responded_at: new Date().toISOString() })
@@ -611,7 +556,6 @@ export async function acceptWorkspaceInvite(
     return { success: false, error: "Failed to join workspace" };
   }
 
-  // Update invite status
   await supabase
     .from("workspace_invites")
     .update({ status: "accepted", responded_at: new Date().toISOString() })
@@ -630,9 +574,6 @@ export async function acceptWorkspaceInvite(
   return { success: true, workspaceId: invite.workspace_id };
 }
 
-/**
- * Decline a workspace invite
- */
 export async function declineWorkspaceInvite(
   inviteId: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -644,7 +585,6 @@ export async function declineWorkspaceInvite(
 
   const supabase = await createClient();
 
-  // Get the invite
   const { data: invite, error: inviteError } = await supabase
     .from("workspace_invites")
     .select("*, workspaces(name)")
@@ -666,7 +606,6 @@ export async function declineWorkspaceInvite(
     message: `${user.name || "Someone"} declined your invitation to join "${workspaceName}"`,
   });
 
-  // Delete the invite record (allows user to be re-invited later)
   const { error: deleteError } = await supabase
     .from("workspace_invites")
     .delete()
@@ -679,9 +618,6 @@ export async function declineWorkspaceInvite(
   return { success: true };
 }
 
-/**
- * Leave a workspace (for non-owners)
- */
 export async function leaveWorkspace(
   workspaceId: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -693,7 +629,6 @@ export async function leaveWorkspace(
 
   const supabase = await createClient();
 
-  // Check if user is a member and get their role
   const { data: membership } = await supabase
     .from("workspace_members")
     .select("role")
@@ -710,14 +645,12 @@ export async function leaveWorkspace(
     return { success: false, error: "Owners cannot leave their workspace. Delete it or transfer ownership first." };
   }
 
-  // Get workspace details for notification
   const { data: workspace } = await supabase
     .from("workspaces")
     .select("name, owner_id")
     .eq("id", workspaceId)
     .single();
 
-  // Remove membership
   const { error: deleteError } = await supabase
     .from("workspace_members")
     .delete()
@@ -729,7 +662,6 @@ export async function leaveWorkspace(
     return { success: false, error: "Failed to leave workspace" };
   }
 
-  // Delete any existing invite records for this user/workspace
   // This allows the user to be re-invited later
   await supabase
     .from("workspace_invites")
@@ -751,9 +683,6 @@ export async function leaveWorkspace(
   return { success: true };
 }
 
-/**
- * Get pending invites for a workspace (for workspace owners/admins to see)
- */
 export async function getWorkspacePendingInvites(
   workspaceId: string
 ): Promise<{ id: string; email: string; name: string | null; avatar_url: string | null; created_at: string }[]> {
@@ -765,7 +694,6 @@ export async function getWorkspacePendingInvites(
 
   const supabase = await createClient();
 
-  // Check if user is owner or admin
   const { data: membership } = await supabase
     .from("workspace_members")
     .select("role")
@@ -777,7 +705,6 @@ export async function getWorkspacePendingInvites(
     return [];
   }
 
-  // Get pending invites with invitee details
   const { data: invites, error } = await supabase
     .from("workspace_invites")
     .select("id, created_at, users!workspace_invites_invitee_id_fkey(id, email, name, avatar_url)")
@@ -799,9 +726,6 @@ export async function getWorkspacePendingInvites(
   }));
 }
 
-/**
- * Cancel a pending invite (for workspace owners/admins)
- */
 export async function cancelWorkspaceInvite(
   inviteId: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -813,7 +737,6 @@ export async function cancelWorkspaceInvite(
 
   const supabase = await createClient();
 
-  // Get the invite to check permissions
   const { data: invite } = await supabase
     .from("workspace_invites")
     .select("workspace_id, invitee_id")
@@ -825,7 +748,6 @@ export async function cancelWorkspaceInvite(
     return { success: false, error: "Invite not found" };
   }
 
-  // Check if user is owner or admin of the workspace
   const { data: membership } = await supabase
     .from("workspace_members")
     .select("role")
@@ -837,7 +759,6 @@ export async function cancelWorkspaceInvite(
     return { success: false, error: "You don't have permission to cancel this invite" };
   }
 
-  // Delete the invite
   const { error: deleteError } = await supabase
     .from("workspace_invites")
     .delete()
@@ -847,7 +768,6 @@ export async function cancelWorkspaceInvite(
     return { success: false, error: "Failed to cancel invite" };
   }
 
-  // Also delete any related notifications
   await supabase
     .from("notifications")
     .delete()
@@ -858,9 +778,6 @@ export async function cancelWorkspaceInvite(
   return { success: true };
 }
 
-/**
- * Get current user's role in a workspace
- */
 export async function getUserWorkspaceRole(
   workspaceId: string
 ): Promise<"owner" | "admin" | "member" | null> {
@@ -882,5 +799,4 @@ export async function getUserWorkspaceRole(
   return membership?.role as "owner" | "admin" | "member" | null;
 }
 
-// Keep the old function name as an alias for backward compatibility
 export const inviteWorkspaceMemberByEmail = sendWorkspaceInvite;

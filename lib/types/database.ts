@@ -1,6 +1,3 @@
-// =====================================================
-// Axon Trello Clone - Database Types
-// =====================================================
 
 export interface User {
   id: string;
@@ -142,7 +139,6 @@ export interface Notification {
   link: string | null;
   is_read: boolean;
   created_at: string;
-  // For workspace invites, this stores the invite_id to enable accept/decline
   metadata?: {
     invite_id?: string;
     workspace_id?: string;
@@ -188,10 +184,6 @@ export interface NotificationPreferences {
   workspace_invites: boolean;
 }
 
-// =====================================================
-// Extended Types with Relations
-// =====================================================
-
 export interface CardWithRelations extends Card {
   labels?: Label[];
   assignees?: User[];
@@ -213,10 +205,6 @@ export interface WorkspaceWithBoards extends Workspace {
   boards: Board[];
   members?: WorkspaceMember[];
 }
-
-// =====================================================
-// Input Types for Create/Update
-// =====================================================
 
 export interface CreateBoardInput {
   workspace_id: string;

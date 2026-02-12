@@ -4,10 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "./users";
 import type { Notification } from "@/lib/types/database";
 
-// =====================================================
-// Notification Types
-// =====================================================
-
 export type NotificationType =
   | "card_assigned"
   | "comment_added"
@@ -24,10 +20,6 @@ interface CreateNotificationInput {
   message?: string;
   link?: string;
 }
-
-// =====================================================
-// Create Notification
-// =====================================================
 
 export async function createNotification(
   input: CreateNotificationInput
@@ -52,10 +44,6 @@ export async function createNotification(
 
   return data;
 }
-
-// =====================================================
-// Get Notifications for Current User
-// =====================================================
 
 export async function getNotifications(
   limit = 20,
@@ -83,10 +71,6 @@ export async function getNotifications(
   return data || [];
 }
 
-// =====================================================
-// Get Unread Count
-// =====================================================
-
 export async function getUnreadCount(): Promise<number> {
   const user = await getCurrentUser();
 
@@ -109,10 +93,6 @@ export async function getUnreadCount(): Promise<number> {
   return count || 0;
 }
 
-// =====================================================
-// Mark Notification as Read
-// =====================================================
-
 export async function markAsRead(notificationId: string): Promise<boolean> {
   const user = await getCurrentUser();
 
@@ -131,10 +111,6 @@ export async function markAsRead(notificationId: string): Promise<boolean> {
   return !error;
 }
 
-// =====================================================
-// Mark All as Read
-// =====================================================
-
 export async function markAllAsRead(): Promise<boolean> {
   const user = await getCurrentUser();
 
@@ -152,10 +128,6 @@ export async function markAllAsRead(): Promise<boolean> {
 
   return !error;
 }
-
-// =====================================================
-// Delete Notification
-// =====================================================
 
 export async function deleteNotification(
   notificationId: string
@@ -177,10 +149,6 @@ export async function deleteNotification(
   return !error;
 }
 
-// =====================================================
-// Clear All Notifications
-// =====================================================
-
 export async function clearAllNotifications(): Promise<boolean> {
   const user = await getCurrentUser();
 
@@ -197,10 +165,6 @@ export async function clearAllNotifications(): Promise<boolean> {
 
   return !error;
 }
-
-// =====================================================
-// Helper: Notify Multiple Users
-// =====================================================
 
 export async function notifyUsers(
   userIds: string[],

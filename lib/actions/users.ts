@@ -4,10 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { currentUser } from "@clerk/nextjs/server";
 import type { User } from "@/lib/types/database";
 
-/**
- * Sync the current Clerk user to Supabase
- * Call this after sign-in to ensure user exists in database
- */
 export async function syncCurrentUser(): Promise<User | null> {
   const clerkUser = await currentUser();
   
@@ -17,7 +13,6 @@ export async function syncCurrentUser(): Promise<User | null> {
 
   const supabase = await createClient();
 
-  // Check if user already exists
   const { data: existingUser } = await supabase
     .from("users")
     .select("*")
@@ -25,7 +20,6 @@ export async function syncCurrentUser(): Promise<User | null> {
     .single();
 
   if (existingUser) {
-    // Update user if email or name changed
     if (
       existingUser.email !== clerkUser.emailAddresses[0]?.emailAddress ||
       existingUser.name !== `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() ||
@@ -53,7 +47,6 @@ export async function syncCurrentUser(): Promise<User | null> {
     return existingUser;
   }
 
-  // Create new user
   const { data: newUser, error } = await supabase
     .from("users")
     .insert({
@@ -73,9 +66,6 @@ export async function syncCurrentUser(): Promise<User | null> {
   return newUser;
 }
 
-/**
- * Get the current user from Supabase (auto-syncs if not found)
- */
 export async function getCurrentUser(): Promise<User | null> {
   const clerkUser = await currentUser();
   
@@ -99,10 +89,6 @@ export async function getCurrentUser(): Promise<User | null> {
   return user;
 }
 
-/**
- * Search users by name or email (for assigning to cards)
- * Requires authentication to prevent data disclosure
- */
 export async function searchUsers(query: string, limit = 10): Promise<User[]> {
   // Require authentication to search users
   const clerkUser = await currentUser();

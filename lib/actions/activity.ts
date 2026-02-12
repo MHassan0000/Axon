@@ -5,9 +5,6 @@ import { getCurrentUser } from "./users";
 import { verifyCardAccess, verifyBoardAccess } from "./helpers";
 import type { ActivityLog } from "@/lib/types/database";
 
-/**
- * Log an activity
- */
 export async function logActivity(
   action: string,
   cardId?: string,
@@ -42,16 +39,12 @@ export async function logActivity(
   return data;
 }
 
-/**
- * Get recent activity for a user's workspaces
- */
 export async function getRecentActivity(limit: number = 50): Promise<(ActivityLog & { user: { name: string; avatar_url: string } })[]> {
   const supabase = await createClient();
   const user = await getCurrentUser();
 
   if (!user) return [];
 
-  // Get user's workspaces
   const { data: memberships } = await supabase
     .from("workspace_members")
     .select("workspace_id")
@@ -61,7 +54,6 @@ export async function getRecentActivity(limit: number = 50): Promise<(ActivityLo
 
   const workspaceIds = memberships.map((m) => m.workspace_id);
 
-  // Get boards in those workspaces
   const { data: boards } = await supabase
     .from("boards")
     .select("id")
@@ -71,7 +63,6 @@ export async function getRecentActivity(limit: number = 50): Promise<(ActivityLo
 
   const boardIds = boards.map((b) => b.id);
 
-  // Get activity for those boards
   const { data: activities, error } = await supabase
     .from("activity_log")
     .select(`
@@ -90,11 +81,8 @@ export async function getRecentActivity(limit: number = 50): Promise<(ActivityLo
   return activities || [];
 }
 
-/**
- * Get activity for a specific card
- */
 export async function getCardActivity(cardId: string): Promise<(ActivityLog & { user: { name: string; avatar_url: string } })[]> {
-  // Verify user has access to this card
+
   const access = await verifyCardAccess(cardId);
   if (!access.allowed) {
     console.error("User does not have access to this card's activity");
@@ -120,11 +108,8 @@ export async function getCardActivity(cardId: string): Promise<(ActivityLog & { 
   return data || [];
 }
 
-/**
- * Get activity for a specific board
- */
 export async function getBoardActivity(boardId: string, limit: number = 20): Promise<(ActivityLog & { user: { name: string; avatar_url: string } })[]> {
-  // Verify user has access to this board
+
   const access = await verifyBoardAccess(boardId);
   if (!access.allowed) {
     console.error("User does not have access to this board's activity");
@@ -151,10 +136,6 @@ export async function getBoardActivity(boardId: string, limit: number = 20): Pro
   return data || [];
 }
 
-/**
- * Delete all activity for the current user's workspaces
- * Returns the count of deleted activities
- */
 export async function deleteAllActivity(): Promise<{ success: boolean; count: number; error?: string }> {
   const supabase = await createClient();
   const user = await getCurrentUser();
@@ -163,7 +144,6 @@ export async function deleteAllActivity(): Promise<{ success: boolean; count: nu
     return { success: false, count: 0, error: "Not authenticated" };
   }
 
-  // Get user's workspaces
   const { data: memberships } = await supabase
     .from("workspace_members")
     .select("workspace_id")
@@ -175,7 +155,6 @@ export async function deleteAllActivity(): Promise<{ success: boolean; count: nu
 
   const workspaceIds = memberships.map((m) => m.workspace_id);
 
-  // Get boards in those workspaces
   const { data: boards } = await supabase
     .from("boards")
     .select("id")
@@ -187,7 +166,6 @@ export async function deleteAllActivity(): Promise<{ success: boolean; count: nu
 
   const boardIds = boards.map((b) => b.id);
 
-  // Delete activity for those boards
   const { data: deleted, error } = await supabase
     .from("activity_log")
     .delete()

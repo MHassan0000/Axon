@@ -12,10 +12,6 @@ import {
 } from "@/lib/actions";
 import type { Workspace, UpdateWorkspaceInput } from "@/lib/types/database";
 
-// =====================================================
-// Workspaces Hooks
-// =====================================================
-
 export function useWorkspacesQuery() {
     return useQuery({
         queryKey: queryKeys.workspaces.list(),
@@ -49,7 +45,6 @@ export function useCreateWorkspaceMutation() {
         mutationFn: (data: { name: string; description?: string }) => createWorkspace(data),
         onSuccess: (result) => {
             if (result.workspace) {
-                // Optimistically update the cache
                 queryClient.setQueryData<Workspace[]>(
                     queryKeys.workspaces.list(),
                     (old) => (old ? [result.workspace!, ...old] : [result.workspace!])
@@ -57,7 +52,6 @@ export function useCreateWorkspaceMutation() {
             }
         },
         onSettled: () => {
-            // Refetch to ensure consistency
             queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all });
         },
     });
@@ -70,13 +64,10 @@ export function useUpdateWorkspaceMutation() {
         mutationFn: ({ workspaceId, data }: { workspaceId: string; data: UpdateWorkspaceInput }) =>
             updateWorkspace(workspaceId, data),
         onMutate: async ({ workspaceId, data }) => {
-            // Cancel outgoing refetches
             await queryClient.cancelQueries({ queryKey: queryKeys.workspaces.list() });
 
-            // Snapshot previous value
             const previousWorkspaces = queryClient.getQueryData<Workspace[]>(queryKeys.workspaces.list());
 
-            // Optimistically update
             queryClient.setQueryData<Workspace[]>(
                 queryKeys.workspaces.list(),
                 (old) => old?.map((w) => (w.id === workspaceId ? { ...w, ...data } : w)) || []
@@ -85,7 +76,6 @@ export function useUpdateWorkspaceMutation() {
             return { previousWorkspaces };
         },
         onError: (_err, _vars, context) => {
-            // Rollback on error
             if (context?.previousWorkspaces) {
                 queryClient.setQueryData(queryKeys.workspaces.list(), context.previousWorkspaces);
             }

@@ -4,12 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "./users";
 import type { Board, Workspace, CardWithRelations, ActivityLog } from "@/lib/types/database";
 
-// =====================================================
-// Optimized Dashboard Actions
-// These actions are designed for bulk fetching to reduce
-// N+1 queries and improve page load performance
-// =====================================================
-
 export interface DashboardStats {
     totalWorkspaces: number;
     totalBoards: number;
@@ -53,10 +47,6 @@ export interface AnalyticsSummary {
     recentBoards: Board[];
 }
 
-/**
- * Get all boards for the current user across all workspaces in a single query
- * This replaces the N+1 pattern of fetching boards per workspace
- */
 export async function getAllUserBoards(): Promise<BoardWithWorkspace[]> {
     const user = await getCurrentUser();
     if (!user) return [];
@@ -107,10 +97,6 @@ export async function getAllUserBoards(): Promise<BoardWithWorkspace[]> {
     return boards;
 }
 
-/**
- * Get all team members across all workspaces the user belongs to
- * Single query instead of N queries per workspace
- */
 export async function getAllTeamMembers(): Promise<TeamMember[]> {
     const user = await getCurrentUser();
     if (!user) return [];
@@ -129,7 +115,6 @@ export async function getAllTeamMembers(): Promise<TeamMember[]> {
 
     const workspaceIds = memberships.map((m) => m.workspace_id);
 
-    // Get all members of those workspaces with workspace info in one query
     const { data, error } = await supabase
         .from("workspace_members")
         .select(`
@@ -172,17 +157,12 @@ export async function getAllTeamMembers(): Promise<TeamMember[]> {
     return members;
 }
 
-/**
- * Get cards with due dates for calendar view
- * Single optimized query instead of fetching all boards then all cards
- */
 export async function getCardsWithDueDates(): Promise<CalendarCard[]> {
     const user = await getCurrentUser();
     if (!user) return [];
 
     const supabase = await createClient();
 
-    // Get workspace IDs first
     const { data: memberships } = await supabase
         .from("workspace_members")
         .select("workspace_id")
@@ -192,7 +172,6 @@ export async function getCardsWithDueDates(): Promise<CalendarCard[]> {
 
     const workspaceIds = memberships.map((m) => m.workspace_id);
 
-    // Get all cards with due dates from user's workspaces
     const { data, error } = await supabase
         .from("cards")
         .select(`
@@ -234,17 +213,12 @@ export async function getCardsWithDueDates(): Promise<CalendarCard[]> {
     });
 }
 
-/**
- * Get analytics summary with all data needed for the analytics page
- * Optimized to minimize database round trips
- */
 export async function getAnalyticsSummary(): Promise<AnalyticsSummary | null> {
     const user = await getCurrentUser();
     if (!user) return null;
 
     const supabase = await createClient();
 
-    // Get workspace IDs
     const { data: memberships } = await supabase
         .from("workspace_members")
         .select("workspace_id")
@@ -277,14 +251,12 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary | null> {
         membersResult,
         activityResult,
     ] = await Promise.all([
-        // Get all boards
         supabase
             .from("boards")
             .select("id, name, background_color, background_image, workspace_id, created_at, updated_at")
             .in("workspace_id", workspaceIds)
             .order("created_at", { ascending: false }),
         
-        // Get all cards with completion status
         supabase
             .from("cards")
             .select(`
@@ -299,13 +271,11 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary | null> {
             `)
             .in("lists.boards.workspace_id", workspaceIds),
         
-        // Get unique member count
         supabase
             .from("workspace_members")
             .select("user_id")
             .in("workspace_id", workspaceIds),
         
-        // Get recent activity (last 7 days)
         supabase
             .from("activity_logs")
             .select("created_at")
@@ -380,16 +350,12 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary | null> {
     };
 }
 
-/**
- * Get dashboard stats quickly for the main dashboard
- */
 export async function getDashboardStats(): Promise<DashboardStats | null> {
     const user = await getCurrentUser();
     if (!user) return null;
 
     const supabase = await createClient();
 
-    // Get workspace IDs
     const { data: memberships } = await supabase
         .from("workspace_members")
         .select("workspace_id")

@@ -3,10 +3,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "./users";
 
-// =====================================================
-// Search Types
-// =====================================================
-
 export type SearchResultType = "workspace" | "board" | "card" | "list";
 
 export interface SearchResult {
@@ -34,14 +30,6 @@ export interface SearchResponse {
     totalCount: number;
 }
 
-// =====================================================
-// Global Search Function
-// =====================================================
-
-/**
- * Performs a comprehensive search across workspaces, boards, lists, and cards
- * Only returns items the user has access to
- */
 export async function globalSearch(
     query: string,
     options?: {
@@ -65,7 +53,6 @@ export async function globalSearch(
     const limit = options?.limit || 20;
     const types = options?.types || ["workspace", "board", "card", "list"];
 
-    // Get all workspace IDs the user has access to
     const { data: memberships } = await supabase
         .from("workspace_members")
         .select("workspace_id")
@@ -184,7 +171,6 @@ export async function globalSearch(
     if (types.includes("card")) {
         searchPromises.push(
             (async () => {
-                // Get accessible boards with their workspace info
                 const { data: accessibleBoards } = await supabase
                     .from("boards")
                     .select("id, name, workspace_id, workspaces(name)")
@@ -194,7 +180,6 @@ export async function globalSearch(
                     const boardIds = accessibleBoards.map((b) => b.id);
                     const boardMap = new Map(accessibleBoards.map((b) => [b.id, b]));
 
-                    // Get lists for these boards
                     const { data: lists } = await supabase
                         .from("lists")
                         .select("id, name, board_id")
@@ -272,10 +257,6 @@ export async function globalSearch(
     };
 }
 
-// =====================================================
-// Quick Search (for autocomplete - faster, less data)
-// =====================================================
-
 export async function quickSearch(query: string): Promise<SearchResult[]> {
     const response = await globalSearch(query, {
         limit: 8,
@@ -283,10 +264,6 @@ export async function quickSearch(query: string): Promise<SearchResult[]> {
     });
     return response.results;
 }
-
-// =====================================================
-// Search within a specific board
-// =====================================================
 
 export async function searchInBoard(
     boardId: string,
@@ -301,7 +278,6 @@ export async function searchInBoard(
     const supabase = await createClient();
     const searchQuery = query.trim().toLowerCase();
 
-    // Verify user has access to this board
     const { data: board } = await supabase
         .from("boards")
         .select("id, workspace_id")
@@ -319,7 +295,6 @@ export async function searchInBoard(
 
     if (!membership) return [];
 
-    // Get lists in this board
     const { data: lists } = await supabase
         .from("lists")
         .select("id, name")
@@ -354,10 +329,6 @@ export async function searchInBoard(
     }));
 }
 
-// =====================================================
-// Search within a specific workspace
-// =====================================================
-
 export async function searchInWorkspace(
     workspaceId: string,
     query: string
@@ -371,7 +342,6 @@ export async function searchInWorkspace(
     const supabase = await createClient();
     const searchQuery = query.trim().toLowerCase();
 
-    // Verify user has access to this workspace
     const { data: membership } = await supabase
         .from("workspace_members")
         .select("user_id")
@@ -383,6 +353,5 @@ export async function searchInWorkspace(
 
     const response = await globalSearch(query, { limit: 20 });
 
-    // Filter to only results in this workspace
     return response.results.filter((r) => r.workspaceId === workspaceId);
 }

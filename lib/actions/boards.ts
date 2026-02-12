@@ -19,11 +19,7 @@ import type {
   Label
 } from "@/lib/types/database";
 
-/**
- * Create a new board
- */
 export async function createBoard(input: CreateBoardInput): Promise<{ board: Board | null; error?: string }> {
-  // Validate input
   const validation = validateInput(createBoardSchema, input);
   if (!validation.success) {
     return { board: null, error: validation.error };
@@ -38,7 +34,6 @@ export async function createBoard(input: CreateBoardInput): Promise<{ board: Boa
 
   const supabase = await createClient();
 
-  // Check if user is a member of the workspace
   const { data: membership } = await supabase
     .from("workspace_members")
     .select("*")
@@ -50,7 +45,6 @@ export async function createBoard(input: CreateBoardInput): Promise<{ board: Boa
     return { board: null, error: "Not a member of this workspace" };
   }
 
-  // Check plan limits - count existing boards in this workspace
   const { count: boardCount } = await supabase
     .from("boards")
     .select("*", { count: "exact", head: true })
@@ -61,7 +55,6 @@ export async function createBoard(input: CreateBoardInput): Promise<{ board: Boa
     return { board: null, error: canCreate.reason };
   }
 
-  // Get the next position
   const { data: lastBoard } = await supabase
     .from("boards")
     .select("position")
@@ -90,7 +83,6 @@ export async function createBoard(input: CreateBoardInput): Promise<{ board: Boa
     return { board: null, error: "Failed to create board" };
   }
 
-  // Create default labels for the board
   const defaultLabels = [
     { name: "Bug", color: "#ef4444" },
     { name: "Feature", color: "#22c55e" },
@@ -110,9 +102,6 @@ export async function createBoard(input: CreateBoardInput): Promise<{ board: Boa
   return { board };
 }
 
-/**
- * Get all boards for a workspace
- */
 export async function getBoards(workspaceId: string): Promise<Board[]> {
   const user = await getCurrentUser();
   
@@ -122,7 +111,6 @@ export async function getBoards(workspaceId: string): Promise<Board[]> {
 
   const supabase = await createClient();
 
-  // Check membership
   const { data: membership } = await supabase
     .from("workspace_members")
     .select("*")
@@ -148,9 +136,6 @@ export async function getBoards(workspaceId: string): Promise<Board[]> {
   return boards;
 }
 
-/**
- * Get a single board with all lists and cards
- */
 export async function getBoardWithLists(boardId: string): Promise<BoardWithLists | null> {
   const user = await getCurrentUser();
   
@@ -160,7 +145,6 @@ export async function getBoardWithLists(boardId: string): Promise<BoardWithLists
 
   const supabase = await createClient();
 
-  // Get board
   const { data: board, error: boardError } = await supabase
     .from("boards")
     .select("*")
@@ -172,7 +156,6 @@ export async function getBoardWithLists(boardId: string): Promise<BoardWithLists
     return null;
   }
 
-  // Check membership
   const { data: membership } = await supabase
     .from("workspace_members")
     .select("*")
@@ -185,7 +168,6 @@ export async function getBoardWithLists(boardId: string): Promise<BoardWithLists
     return null;
   }
 
-  // Get lists with cards
   const { data: lists, error: listsError } = await supabase
     .from("lists")
     .select("*")
@@ -197,7 +179,6 @@ export async function getBoardWithLists(boardId: string): Promise<BoardWithLists
     return null;
   }
 
-  // Get all cards for these lists
   const listIds = lists.map((l) => l.id);
   const { data: cards } = await supabase
     .from("cards")
@@ -205,16 +186,13 @@ export async function getBoardWithLists(boardId: string): Promise<BoardWithLists
     .in("list_id", listIds)
     .order("position", { ascending: true });
 
-  // Get labels for the board
   const { data: labels } = await supabase
     .from("labels")
     .select("*")
     .eq("board_id", boardId);
 
-  // Get card IDs for fetching related data
   const cardIds = cards?.map((c) => c.id) || [];
 
-  // Fetch all related data in parallel for better performance
   const [cardLabelsResult, cardAssigneesResult, commentsCountResult, attachmentsCountResult] = await Promise.all([
     // Card labels
     supabase
@@ -281,21 +259,16 @@ export async function getBoardWithLists(boardId: string): Promise<BoardWithLists
   };
 }
 
-/**
- * Update a board
- */
 export async function updateBoard(
   boardId: string,
   input: UpdateBoardInput
 ): Promise<Board | null> {
-  // Validate boardId
   const idValidation = z.string().uuid("Invalid board ID").safeParse(boardId);
   if (!idValidation.success) {
     console.error("Invalid board ID");
     return null;
   }
 
-  // Validate input
   const validation = validateInput(updateBoardSchema, input);
   if (!validation.success) {
     console.error("Validation failed:", validation.error);
@@ -309,7 +282,6 @@ export async function updateBoard(
     return null;
   }
 
-  // Verify user has access to this board (member or higher)
   const access = await verifyBoardAccess(boardId);
   if (!access.allowed) {
     console.error("User does not have access to this board");
@@ -333,9 +305,6 @@ export async function updateBoard(
   return board;
 }
 
-/**
- * Delete a board
- */
 export async function deleteBoard(boardId: string): Promise<boolean> {
   const user = await getCurrentUser();
   
@@ -343,7 +312,6 @@ export async function deleteBoard(boardId: string): Promise<boolean> {
     return false;
   }
 
-  // Verify user has admin or owner access to delete the board
   const access = await verifyBoardAccess(boardId, "admin");
   if (!access.allowed) {
     console.error("User does not have permission to delete this board");
@@ -365,22 +333,17 @@ export async function deleteBoard(boardId: string): Promise<boolean> {
   return true;
 }
 
-/**
- * Create a label for a board
- */
 export async function createLabel(
   boardId: string,
   name: string,
   color: string
 ): Promise<Label | null> {
-  // Validate input
   const validation = validateInput(createLabelSchema, { board_id: boardId, name, color });
   if (!validation.success) {
     console.error("Validation failed:", validation.error);
     return null;
   }
 
-  // Verify user has access to this board
   const access = await verifyBoardAccess(boardId);
   if (!access.allowed) {
     console.error("User does not have access to this board");
@@ -407,13 +370,9 @@ export async function createLabel(
   return label;
 }
 
-/**
- * Delete a label
- */
 export async function deleteLabel(labelId: string): Promise<boolean> {
   const supabase = await createClient();
 
-  // Get the label to find the board
   const { data: label } = await supabase
     .from("labels")
     .select("board_id")
@@ -424,7 +383,6 @@ export async function deleteLabel(labelId: string): Promise<boolean> {
     return false;
   }
 
-  // Verify user has access to this board
   const access = await verifyBoardAccess(label.board_id);
   if (!access.allowed) {
     console.error("User does not have access to this board");
@@ -448,10 +406,6 @@ const BOARD_BACKGROUNDS_BUCKET = "board-backgrounds";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
-/**
- * Upload a background image for a board
- * Returns the public URL of the uploaded image
- */
 export async function uploadBoardBackground(
   workspaceId: string,
   formData: FormData
@@ -462,7 +416,6 @@ export async function uploadBoardBackground(
     return { url: null, error: "User not authenticated" };
   }
 
-  // Verify user has access to this workspace
   const access = await verifyWorkspaceAccess(workspaceId);
   if (!access.allowed) {
     return { url: null, error: "You don't have access to this workspace" };
@@ -473,28 +426,23 @@ export async function uploadBoardBackground(
     return { url: null, error: "No file provided" };
   }
 
-  // Validate file size
   if (file.size > MAX_IMAGE_SIZE) {
     return { url: null, error: "Image must be smaller than 5MB" };
   }
 
-  // Validate file type
   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
     return { url: null, error: "Only JPEG, PNG, WebP and GIF images are allowed" };
   }
 
   const supabase = await createClient();
 
-  // Generate unique file path
   const timestamp = Date.now();
   const ext = file.name.split('.').pop() || 'jpg';
   const filePath = `${workspaceId}/${timestamp}.${ext}`;
 
-  // Convert File to ArrayBuffer then to Uint8Array for upload
   const arrayBuffer = await file.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
 
-  // Upload to Supabase Storage
   const { data: uploadData, error: uploadError } = await supabase.storage
     .from(BOARD_BACKGROUNDS_BUCKET)
     .upload(filePath, uint8Array, {
@@ -507,7 +455,6 @@ export async function uploadBoardBackground(
     return { url: null, error: "Failed to upload image" };
   }
 
-  // Get public URL
   const { data: urlData } = supabase.storage
     .from(BOARD_BACKGROUNDS_BUCKET)
     .getPublicUrl(filePath);

@@ -1,4 +1,3 @@
-// Query keys factory for consistent cache management
 export const queryKeys = {
     // User queries
     user: {

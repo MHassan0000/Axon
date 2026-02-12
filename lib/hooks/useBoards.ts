@@ -11,10 +11,6 @@ import {
 } from "@/lib/actions";
 import type { Board, BoardWithLists, CreateBoardInput, UpdateBoardInput } from "@/lib/types/database";
 
-// =====================================================
-// Boards Hooks
-// =====================================================
-
 export function useBoardsQuery(workspaceId: string) {
     return useQuery({
         queryKey: queryKeys.boards.byWorkspace(workspaceId),
@@ -40,7 +36,6 @@ export function useCreateBoardMutation() {
         mutationFn: (data: CreateBoardInput) => createBoard(data),
         onSuccess: (result, variables) => {
             if (result.board) {
-                // Optimistically update the boards list for this workspace
                 queryClient.setQueryData<Board[]>(
                     queryKeys.boards.byWorkspace(variables.workspace_id),
                     (old) => (old ? [...old, result.board!] : [result.board!])

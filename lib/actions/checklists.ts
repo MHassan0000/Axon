@@ -14,21 +14,16 @@ import type {
   ChecklistWithItems 
 } from "@/lib/types/database";
 
-/**
- * Create a new checklist
- */
 export async function createChecklist(
   cardId: string,
   title: string = "Checklist"
 ): Promise<Checklist | null> {
-  // Validate card ID
   const cardIdValidation = z.string().uuid("Invalid card ID").safeParse(cardId);
   if (!cardIdValidation.success) {
     console.error("Invalid card ID");
     return null;
   }
 
-  // Validate title
   const titleValidation = checklistTitleSchema.safeParse(title);
   if (!titleValidation.success) {
     console.error("Validation failed:", titleValidation.error.issues[0]?.message);
@@ -43,7 +38,6 @@ export async function createChecklist(
     return null;
   }
 
-  // Verify user has access to this card
   const access = await verifyCardAccess(cardId);
   if (!access.allowed) {
     console.error("User does not have access to this card");
@@ -52,7 +46,6 @@ export async function createChecklist(
 
   const supabase = await createClient();
 
-  // Get max position for new checklist
   const { data: existing } = await supabase
     .from("checklists")
     .select("position")
@@ -76,18 +69,13 @@ export async function createChecklist(
   return data;
 }
 
-/**
- * Get checklists for a card
- */
 export async function getChecklists(cardId: string): Promise<ChecklistWithItems[]> {
-  // Validate card ID
   const cardIdValidation = z.string().uuid("Invalid card ID").safeParse(cardId);
   if (!cardIdValidation.success) {
     console.error("Invalid card ID");
     return [];
   }
 
-  // Verify user has access to this card
   const access = await verifyCardAccess(cardId);
   if (!access.allowed) {
     console.error("User does not have access to this card");
@@ -107,7 +95,6 @@ export async function getChecklists(cardId: string): Promise<ChecklistWithItems[
     return [];
   }
 
-  // Fetch items for each checklist
   const checklistsWithItems: ChecklistWithItems[] = await Promise.all(
     checklists.map(async (checklist) => {
       const { data: items } = await supabase
@@ -126,18 +113,13 @@ export async function getChecklists(cardId: string): Promise<ChecklistWithItems[
   return checklistsWithItems;
 }
 
-/**
- * Delete a checklist
- */
 export async function deleteChecklist(checklistId: string): Promise<boolean> {
-  // Validate ID
   const idValidation = z.string().uuid("Invalid checklist ID").safeParse(checklistId);
   if (!idValidation.success) {
     console.error("Invalid checklist ID");
     return false;
   }
 
-  // Verify user has access to this checklist
   const access = await verifyChecklistAccess(checklistId);
   if (!access.allowed) {
     console.error("User does not have access to this checklist");
@@ -159,21 +141,16 @@ export async function deleteChecklist(checklistId: string): Promise<boolean> {
   return true;
 }
 
-/**
- * Update checklist title
- */
 export async function updateChecklist(
   checklistId: string,
   title: string
 ): Promise<boolean> {
-  // Validate ID
   const idValidation = z.string().uuid("Invalid checklist ID").safeParse(checklistId);
   if (!idValidation.success) {
     console.error("Invalid checklist ID");
     return false;
   }
 
-  // Validate title
   const titleValidation = checklistTitleSchema.safeParse(title);
   if (!titleValidation.success) {
     console.error("Validation failed:", titleValidation.error.issues[0]?.message);
@@ -181,7 +158,6 @@ export async function updateChecklist(
   }
   const validTitle = titleValidation.data;
 
-  // Verify user has access to this checklist
   const access = await verifyChecklistAccess(checklistId);
   if (!access.allowed) {
     console.error("User does not have access to this checklist");
@@ -203,21 +179,16 @@ export async function updateChecklist(
   return true;
 }
 
-/**
- * Add item to checklist
- */
 export async function addChecklistItem(
   checklistId: string,
   title: string
 ): Promise<ChecklistItem | null> {
-  // Validate checklist ID
   const idValidation = z.string().uuid("Invalid checklist ID").safeParse(checklistId);
   if (!idValidation.success) {
     console.error("Invalid checklist ID");
     return null;
   }
 
-  // Validate title
   const titleValidation = checklistItemTitleSchema.safeParse(title);
   if (!titleValidation.success) {
     console.error("Validation failed:", titleValidation.error.issues[0]?.message);
@@ -225,7 +196,6 @@ export async function addChecklistItem(
   }
   const validTitle = titleValidation.data;
 
-  // Verify user has access to this checklist
   const access = await verifyChecklistAccess(checklistId);
   if (!access.allowed) {
     console.error("User does not have access to this checklist");
@@ -234,7 +204,6 @@ export async function addChecklistItem(
 
   const supabase = await createClient();
 
-  // Get max position
   const { data: existing } = await supabase
     .from("checklist_items")
     .select("position")
@@ -258,28 +227,22 @@ export async function addChecklistItem(
   return data;
 }
 
-/**
- * Toggle checklist item completion
- */
 export async function toggleChecklistItem(
   itemId: string,
   isComplete: boolean
 ): Promise<boolean> {
-  // Validate item ID
   const idValidation = z.string().uuid("Invalid item ID").safeParse(itemId);
   if (!idValidation.success) {
     console.error("Invalid checklist item ID");
     return false;
   }
 
-  // Validate isComplete
   const boolValidation = z.boolean().safeParse(isComplete);
   if (!boolValidation.success) {
     console.error("Invalid isComplete value");
     return false;
   }
 
-  // Verify user has access to this checklist item
   const access = await verifyChecklistItemAccess(itemId);
   if (!access.allowed) {
     console.error("User does not have access to this checklist item");
@@ -301,18 +264,13 @@ export async function toggleChecklistItem(
   return true;
 }
 
-/**
- * Delete checklist item
- */
 export async function deleteChecklistItem(itemId: string): Promise<boolean> {
-  // Validate item ID
   const idValidation = z.string().uuid("Invalid item ID").safeParse(itemId);
   if (!idValidation.success) {
     console.error("Invalid checklist item ID");
     return false;
   }
 
-  // Verify user has access to this checklist item
   const access = await verifyChecklistItemAccess(itemId);
   if (!access.allowed) {
     console.error("User does not have access to this checklist item");
@@ -334,21 +292,16 @@ export async function deleteChecklistItem(itemId: string): Promise<boolean> {
   return true;
 }
 
-/**
- * Update checklist item title
- */
 export async function updateChecklistItem(
   itemId: string,
   title: string
 ): Promise<boolean> {
-  // Validate item ID
   const idValidation = z.string().uuid("Invalid item ID").safeParse(itemId);
   if (!idValidation.success) {
     console.error("Invalid checklist item ID");
     return false;
   }
 
-  // Validate title
   const titleValidation = checklistItemTitleSchema.safeParse(title);
   if (!titleValidation.success) {
     console.error("Validation failed:", titleValidation.error.issues[0]?.message);
@@ -356,7 +309,6 @@ export async function updateChecklistItem(
   }
   const validTitle = titleValidation.data;
 
-  // Verify user has access to this checklist item
   const access = await verifyChecklistItemAccess(itemId);
   if (!access.allowed) {
     console.error("User does not have access to this checklist item");

@@ -21,7 +21,6 @@ const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefin
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const queryClient = useQueryClient();
     
-    // Use React Query for data fetching with caching
     const { 
         data: workspaces = [], 
         isLoading: loading, 
@@ -29,12 +28,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         refetch 
     } = useWorkspacesQuery();
 
-    // Mutations
     const createMutation = useCreateWorkspaceMutation();
     const deleteMutation = useDeleteWorkspaceMutation();
     const updateMutation = useUpdateWorkspaceMutation();
 
-    // Convert query error to string
     const error = queryError ? "Failed to load workspaces" : null;
 
     // Refresh workspaces (invalidate cache)
@@ -42,7 +39,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         await refetch();
     }, [refetch]);
 
-    // Optimistic update: add workspace locally
     const addWorkspace = useCallback((workspace: Workspace) => {
         queryClient.setQueryData<Workspace[]>(
             queryKeys.workspaces.list(),
@@ -50,17 +46,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         );
     }, [queryClient]);
 
-    // Remove workspace locally
     const removeWorkspace = useCallback((workspaceId: string) => {
         queryClient.setQueryData<Workspace[]>(
             queryKeys.workspaces.list(),
             (old) => old?.filter((w) => w.id !== workspaceId) || []
         );
-        // Also trigger the mutation
         deleteMutation.mutate(workspaceId);
     }, [queryClient, deleteMutation]);
 
-    // Update workspace locally
     const updateWorkspaceLocal = useCallback((workspace: Workspace) => {
         queryClient.setQueryData<Workspace[]>(
             queryKeys.workspaces.list(),

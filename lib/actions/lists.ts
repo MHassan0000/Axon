@@ -21,11 +21,7 @@ const reorderListsSchema = z.object({
   listIds: z.array(z.string().uuid("Invalid list ID")).min(1, "At least one list ID required"),
 });
 
-/**
- * Create a new list (column)
- */
 export async function createList(input: CreateListInput): Promise<List | null> {
-  // Validate input
   const validation = validateInput(createListSchema, input);
   if (!validation.success) {
     console.error("Validation failed:", validation.error);
@@ -40,7 +36,6 @@ export async function createList(input: CreateListInput): Promise<List | null> {
     return null;
   }
 
-  // Verify user has access to this board's workspace
   const access = await verifyBoardAccess(validData.board_id);
   if (!access.allowed) {
     console.error("User does not have access to this board");
@@ -49,7 +44,6 @@ export async function createList(input: CreateListInput): Promise<List | null> {
 
   const supabase = await createClient();
 
-  // Get the next position
   const { data: lastList } = await supabase
     .from("lists")
     .select("position")
@@ -79,21 +73,16 @@ export async function createList(input: CreateListInput): Promise<List | null> {
   return list;
 }
 
-/**
- * Update a list
- */
 export async function updateList(
   listId: string,
   input: UpdateListInput
 ): Promise<List | null> {
-  // Validate ID
   const idValidation = z.string().uuid("Invalid list ID").safeParse(listId);
   if (!idValidation.success) {
     console.error("Invalid list ID");
     return null;
   }
 
-  // Validate input
   const validation = validateInput(updateListSchema, input);
   if (!validation.success) {
     console.error("Validation failed:", validation.error);
@@ -101,7 +90,6 @@ export async function updateList(
   }
   const validData = validation.data;
 
-  // Verify user has access to this list
   const access = await verifyListAccess(listId);
   if (!access.allowed) {
     console.error("User does not have access to this list");
@@ -125,18 +113,13 @@ export async function updateList(
   return list;
 }
 
-/**
- * Delete a list
- */
 export async function deleteList(listId: string): Promise<boolean> {
-  // Validate ID
   const idValidation = z.string().uuid("Invalid list ID").safeParse(listId);
   if (!idValidation.success) {
     console.error("Invalid list ID");
     return false;
   }
 
-  // Verify user has access to this list
   const access = await verifyListAccess(listId);
   if (!access.allowed) {
     console.error("User does not have access to this list");
@@ -158,21 +141,16 @@ export async function deleteList(listId: string): Promise<boolean> {
   return true;
 }
 
-/**
- * Reorder lists within a board
- */
 export async function reorderLists(
   boardId: string,
   listIds: string[]
 ): Promise<boolean> {
-  // Validate input
   const validation = reorderListsSchema.safeParse({ boardId, listIds });
   if (!validation.success) {
     console.error("Validation failed:", validation.error.issues[0]?.message);
     return false;
   }
 
-  // Verify user has access to this board
   const access = await verifyBoardAccess(boardId);
   if (!access.allowed) {
     console.error("User does not have access to this board");
@@ -181,7 +159,6 @@ export async function reorderLists(
 
   const supabase = await createClient();
 
-  // Update each list's position
   const updates = listIds.map((id, index) => 
     supabase
       .from("lists")
@@ -199,21 +176,16 @@ export async function reorderLists(
   }
 }
 
-/**
- * Copy a list with all its cards
- */
 export async function copyList(
   listId: string,
   newName?: string
 ): Promise<List | null> {
-  // Validate ID
   const idValidation = z.string().uuid("Invalid list ID").safeParse(listId);
   if (!idValidation.success) {
     console.error("Invalid list ID");
     return null;
   }
 
-  // Validate new name if provided
   if (newName !== undefined) {
     const nameValidation = z.string().max(100, "List name must be 100 characters or less").safeParse(newName);
     if (!nameValidation.success) {
@@ -222,7 +194,6 @@ export async function copyList(
     }
   }
 
-  // Verify user has access to this list
   const access = await verifyListAccess(listId);
   if (!access.allowed) {
     console.error("User does not have access to this list");
@@ -231,7 +202,6 @@ export async function copyList(
 
   const supabase = await createClient();
 
-  // Get the original list
   const { data: originalList } = await supabase
     .from("lists")
     .select("*")
@@ -242,7 +212,6 @@ export async function copyList(
     return null;
   }
 
-  // Get the next position
   const { data: lastList } = await supabase
     .from("lists")
     .select("position")
@@ -253,7 +222,6 @@ export async function copyList(
 
   const position = lastList ? lastList.position + 1 : 0;
 
-  // Create the new list
   const { data: newList, error: listError } = await supabase
     .from("lists")
     .insert({
@@ -270,7 +238,6 @@ export async function copyList(
     return null;
   }
 
-  // Get cards from original list
   const { data: cards } = await supabase
     .from("cards")
     .select("*")

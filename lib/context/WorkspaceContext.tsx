@@ -23,16 +23,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
-    // Use ref to store queryClient to avoid re-render loops
     // The ref persists across renders without causing dependency changes
     const queryClientRef = useRef<ReturnType<typeof useQueryClient> | null>(null);
     try {
         queryClientRef.current = useQueryClient();
     } catch {
-        // Query client not available (outside QueryProvider)
     }
 
-    // Fetch workspaces from server - stable function with no dependencies
     const refreshWorkspaces = useCallback(async () => {
         try {
             setLoading(true);
@@ -40,7 +37,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             const ws = await getWorkspaces();
             setWorkspaces(ws);
             
-            // Also update React Query cache if available
             if (queryClientRef.current) {
                 queryClientRef.current.setQueryData(queryKeys.workspaces.list(), ws);
             }
@@ -50,53 +46,47 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         } finally {
             setLoading(false);
         }
-    }, []); // Empty deps - function is now stable
+    }, []);
 
     // Initial fetch on mount only
     useEffect(() => {
         refreshWorkspaces();
     }, [refreshWorkspaces]);
 
-    // Optimistic update: add workspace locally
     const addWorkspace = useCallback((workspace: Workspace) => {
         setWorkspaces((prev) => [workspace, ...prev]);
         
-        // Also update React Query cache
         if (queryClientRef.current) {
             queryClientRef.current.setQueryData<Workspace[]>(
                 queryKeys.workspaces.list(),
                 (old) => (old ? [workspace, ...old] : [workspace])
             );
         }
-    }, []); // Empty deps - uses ref
+    }, []);
 
-    // Remove workspace locally
     const removeWorkspace = useCallback((workspaceId: string) => {
         setWorkspaces((prev) => prev.filter((w) => w.id !== workspaceId));
         
-        // Also update React Query cache
         if (queryClientRef.current) {
             queryClientRef.current.setQueryData<Workspace[]>(
                 queryKeys.workspaces.list(),
                 (old) => old?.filter((w) => w.id !== workspaceId) || []
             );
         }
-    }, []); // Empty deps - uses ref
+    }, []);
 
-    // Update workspace locally
     const updateWorkspace = useCallback((workspace: Workspace) => {
         setWorkspaces((prev) =>
             prev.map((w) => (w.id === workspace.id ? workspace : w))
         );
         
-        // Also update React Query cache
         if (queryClientRef.current) {
             queryClientRef.current.setQueryData<Workspace[]>(
                 queryKeys.workspaces.list(),
                 (old) => old?.map((w) => (w.id === workspace.id ? workspace : w)) || []
             );
         }
-    }, []); // Empty deps - uses ref
+    }, []);
 
     return (
         <WorkspaceContext.Provider

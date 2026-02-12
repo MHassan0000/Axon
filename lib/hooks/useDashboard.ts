@@ -12,16 +12,6 @@ import {
     deleteAllActivity,
 } from "@/lib/actions";
 
-// =====================================================
-// Dashboard Optimized Hooks
-// These hooks use the optimized bulk-fetching actions
-// with appropriate caching strategies
-// =====================================================
-
-/**
- * Fetch all boards across all workspaces for the current user
- * Cached for 30 seconds
- */
 export function useAllUserBoardsQuery() {
     return useQuery({
         queryKey: queryKeys.boards.allUser(),
@@ -31,11 +21,6 @@ export function useAllUserBoardsQuery() {
     });
 }
 
-/**
- * Fetch all team members across all workspaces
- * Cached for 2 minutes (members don't change often)
- * Refetches on window focus to pick up membership changes
- */
 export function useAllTeamMembersQuery() {
     return useQuery({
         queryKey: queryKeys.team.members(),
@@ -45,10 +30,6 @@ export function useAllTeamMembersQuery() {
     });
 }
 
-/**
- * Fetch cards with due dates for calendar view
- * Cached for 1 minute
- */
 export function useCardsWithDueDatesQuery() {
     return useQuery({
         queryKey: queryKeys.cards.withDueDates(),
@@ -58,10 +39,6 @@ export function useCardsWithDueDatesQuery() {
     });
 }
 
-/**
- * Fetch analytics summary
- * Cached for 5 minutes (analytics don't need real-time)
- */
 export function useAnalyticsSummaryQuery() {
     return useQuery({
         queryKey: queryKeys.dashboard.analytics(),
@@ -70,10 +47,6 @@ export function useAnalyticsSummaryQuery() {
     });
 }
 
-/**
- * Fetch dashboard stats
- * Cached for 30 seconds
- */
 export function useDashboardStatsQuery() {
     return useQuery({
         queryKey: queryKeys.dashboard.stats(),
@@ -83,10 +56,6 @@ export function useDashboardStatsQuery() {
     });
 }
 
-/**
- * Fetch recent activity
- * Cached for 30 seconds
- */
 export function useRecentActivityQuery(limit: number = 50) {
     return useQuery({
         queryKey: [...queryKeys.activity.recent(), limit],
@@ -96,10 +65,6 @@ export function useRecentActivityQuery(limit: number = 50) {
     });
 }
 
-/**
- * Hook to invalidate team members cache
- * Use this after member changes (add/remove/invite accept)
- */
 export function useInvalidateTeamMembers() {
     const queryClient = useQueryClient();
     
@@ -108,9 +73,6 @@ export function useInvalidateTeamMembers() {
     };
 }
 
-/**
- * Hook to invalidate workspace members cache for a specific workspace
- */
 export function useInvalidateWorkspaceMembers() {
     const queryClient = useQueryClient();
     
@@ -119,9 +81,6 @@ export function useInvalidateWorkspaceMembers() {
     };
 }
 
-/**
- * Hook to invalidate all workspace-related caches
- */
 export function useInvalidateWorkspaces() {
     const queryClient = useQueryClient();
     
@@ -131,13 +90,6 @@ export function useInvalidateWorkspaces() {
     };
 }
 
-/**
- * Comprehensive hook to invalidate all caches when workspace membership changes
- * Use this when:
- * - User leaves a workspace
- * - User joins a workspace (accepts invite)
- * - Member is added/removed from workspace
- */
 export function useInvalidateOnMembershipChange() {
     const queryClient = useQueryClient();
     
@@ -159,10 +111,6 @@ export function useInvalidateOnMembershipChange() {
     };
 }
 
-/**
- * Hook to refetch all dashboard data
- * Useful when returning to dashboard after actions in other pages
- */
 export function useRefetchDashboardData() {
     const queryClient = useQueryClient();
     
@@ -174,10 +122,6 @@ export function useRefetchDashboardData() {
     };
 }
 
-/**
- * Hook to invalidate calendar cache when due dates change
- * Use this after updating a card's due date
- */
 export function useInvalidateCalendar() {
     const queryClient = useQueryClient();
     
@@ -186,10 +130,6 @@ export function useInvalidateCalendar() {
     };
 }
 
-/**
- * Hook to invalidate activity cache
- * Use this after operations that create activity logs (comments, labels, assignees, etc.)
- */
 export function useInvalidateActivity() {
     const queryClient = useQueryClient();
     
@@ -198,10 +138,6 @@ export function useInvalidateActivity() {
     };
 }
 
-/**
- * Hook to invalidate analytics and dashboard stats caches
- * Use this after operations that affect analytics (card create/delete/complete, board changes)
- */
 export function useInvalidateAnalytics() {
     const queryClient = useQueryClient();
     
@@ -211,10 +147,6 @@ export function useInvalidateAnalytics() {
     };
 }
 
-/**
- * Hook to invalidate all board-related caches
- * Use this after board create/update/delete operations
- */
 export function useInvalidateBoards() {
     const queryClient = useQueryClient();
     
@@ -223,10 +155,6 @@ export function useInvalidateBoards() {
     };
 }
 
-/**
- * Comprehensive hook to invalidate caches when card data changes
- * Use this after card operations (create, delete, complete, etc.)
- */
 export function useInvalidateOnCardChange() {
     const queryClient = useQueryClient();
     
@@ -250,10 +178,6 @@ export function useInvalidateOnCardChange() {
     };
 }
 
-/**
- * Mutation hook to delete all activity
- * Automatically invalidates the activity cache on success
- */
 export function useDeleteAllActivityMutation() {
     const queryClient = useQueryClient();
     

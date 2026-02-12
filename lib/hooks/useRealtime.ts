@@ -5,35 +5,21 @@ import { createClient } from "@/lib/supabase/client";
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import type { Card, List, Board, Comment } from "@/lib/types/database";
 
-// =====================================================
-// Types
-// =====================================================
-
 type TableName = "cards" | "lists" | "boards" | "comments" | "card_labels" | "card_assignees";
 
 type RealtimeEvent = "INSERT" | "UPDATE" | "DELETE";
 
 interface UseRealtimeOptions<T> {
-    /** The table to subscribe to */
     table: TableName;
-    /** Filter by a specific column value (e.g., board_id) */
     filter?: {
         column: string;
         value: string;
     };
-    /** Callback when a row is inserted */
     onInsert?: (payload: T) => void;
-    /** Callback when a row is updated */
     onUpdate?: (payload: T, old: Partial<T>) => void;
-    /** Callback when a row is deleted */
     onDelete?: (old: Partial<T>) => void;
-    /** Whether the subscription is enabled */
     enabled?: boolean;
 }
-
-// =====================================================
-// Generic Real-time Hook
-// =====================================================
 
 export function useRealtime<T extends { id: string }>({
     table,
@@ -74,17 +60,14 @@ export function useRealtime<T extends { id: string }>({
     useEffect(() => {
         if (!enabled) return;
 
-        // Build channel name
         const channelName = filter 
             ? `${table}:${filter.column}=eq.${filter.value}`
             : `${table}:all`;
 
-        // Build filter string for Supabase
         const filterString = filter 
             ? `${filter.column}=eq.${filter.value}`
             : undefined;
 
-        // Create subscription
         const channel = supabase
             .channel(channelName)
             .on<T>(
@@ -101,7 +84,6 @@ export function useRealtime<T extends { id: string }>({
 
         channelRef.current = channel;
 
-        // Cleanup
         return () => {
             if (channelRef.current) {
                 supabase.removeChannel(channelRef.current);
@@ -113,13 +95,6 @@ export function useRealtime<T extends { id: string }>({
     return channelRef.current;
 }
 
-// =====================================================
-// Specialized Hooks for Common Use Cases
-// =====================================================
-
-/**
- * Subscribe to card changes for a specific list
- */
 export function useRealtimeCards(
     listId: string,
     callbacks: {
@@ -138,9 +113,6 @@ export function useRealtimeCards(
     });
 }
 
-/**
- * Subscribe to list changes for a specific board
- */
 export function useRealtimeLists(
     boardId: string,
     callbacks: {
@@ -159,9 +131,6 @@ export function useRealtimeLists(
     });
 }
 
-/**
- * Subscribe to board changes
- */
 export function useRealtimeBoard(
     boardId: string,
     callbacks: {
@@ -178,9 +147,6 @@ export function useRealtimeBoard(
     });
 }
 
-/**
- * Subscribe to comment changes for a specific card
- */
 export function useRealtimeComments(
     cardId: string,
     callbacks: {
@@ -198,10 +164,6 @@ export function useRealtimeComments(
         enabled: !!cardId,
     });
 }
-
-// =====================================================
-// Board-level Real-time Hook (All Cards in Board)
-// =====================================================
 
 interface UseBoardRealtimeOptions {
     boardId: string;

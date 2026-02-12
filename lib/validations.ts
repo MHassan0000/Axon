@@ -1,9 +1,5 @@
 import { z } from "zod";
 
-// =====================================================
-// Workspace Validation Schemas
-// =====================================================
-
 export const workspaceNameSchema = z
   .string()
   .min(1, "Workspace name is required")
@@ -24,10 +20,6 @@ export const updateWorkspaceSchema = z.object({
   name: workspaceNameSchema.optional(),
   description: workspaceDescriptionSchema,
 });
-
-// =====================================================
-// Board Validation Schemas
-// =====================================================
 
 export const boardNameSchema = z
   .string()
@@ -61,10 +53,6 @@ export const updateBoardSchema = z.object({
   background_image: boardImageSchema,
 });
 
-// =====================================================
-// List Validation Schemas
-// =====================================================
-
 export const listNameSchema = z
   .string()
   .min(1, "List name is required")
@@ -81,10 +69,6 @@ export const updateListSchema = z.object({
   name: listNameSchema.optional(),
   color: z.string().optional(),
 });
-
-// =====================================================
-// Card Validation Schemas
-// =====================================================
 
 export const cardTitleSchema = z
   .string()
@@ -117,10 +101,6 @@ export const updateCardSchema = z.object({
   }),
 });
 
-// =====================================================
-// Comment Validation Schema
-// =====================================================
-
 export const commentContentSchema = z
   .string()
   .min(1, "Comment cannot be empty")
@@ -131,10 +111,6 @@ export const createCommentSchema = z.object({
   card_id: z.string().uuid("Invalid card ID"),
   content: commentContentSchema,
 });
-
-// =====================================================
-// Label Validation Schema
-// =====================================================
 
 export const labelNameSchema = z
   .string()
@@ -151,10 +127,6 @@ export const createLabelSchema = z.object({
   color: labelColorSchema,
 });
 
-// =====================================================
-// Checklist Validation Schemas
-// =====================================================
-
 export const checklistTitleSchema = z
   .string()
   .min(1, "Checklist title is required")
@@ -167,10 +139,6 @@ export const checklistItemTitleSchema = z
   .max(500, "Item title must be 500 characters or less")
   .trim();
 
-// =====================================================
-// Utility Types
-// =====================================================
-
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceSchema>;
 export type UpdateWorkspaceInput = z.infer<typeof updateWorkspaceSchema>;
 export type CreateBoardInput = z.infer<typeof createBoardSchema>;
@@ -181,10 +149,6 @@ export type CreateCardInput = z.infer<typeof createCardSchema>;
 export type UpdateCardInput = z.infer<typeof updateCardSchema>;
 export type CreateCommentInput = z.infer<typeof createCommentSchema>;
 export type CreateLabelInput = z.infer<typeof createLabelSchema>;
-
-// =====================================================
-// Validation Helper
-// =====================================================
 
 export function validateInput<T>(
   schema: z.ZodSchema<T>,

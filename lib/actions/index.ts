@@ -1,6 +1,3 @@
-// =====================================================
-// Server Actions Index
-// =====================================================
 // Re-export all server actions for convenient imports
 
 // User actions

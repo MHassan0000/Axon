@@ -1,7 +1,3 @@
-// =====================================================
-// Optimized Hooks Index
-// Re-export all optimized hooks for convenient imports
-// =====================================================
 
 export { queryKeys } from "./queryKeys";
 

@@ -4,20 +4,10 @@ import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "../actions/users";
 
-// =====================================================
-// Cached Data Fetching Functions
-// These use Next.js unstable_cache for server-side caching
-// =====================================================
-
-/**
- * Get cached board data with lists
- * Cache is invalidated based on boardId and has a 30s TTL
- */
 export const getCachedBoardWithLists = unstable_cache(
     async (boardId: string, userId: string) => {
         const supabase = await createClient();
 
-        // Get board
         const { data: board, error: boardError } = await supabase
             .from("boards")
             .select("*")
@@ -28,7 +18,6 @@ export const getCachedBoardWithLists = unstable_cache(
             return null;
         }
 
-        // Check membership
         const { data: membership } = await supabase
             .from("workspace_members")
             .select("*")
@@ -40,7 +29,6 @@ export const getCachedBoardWithLists = unstable_cache(
             return null;
         }
 
-        // Get lists with cards - use Promise.all for parallel fetching
         const [listsResult, labelsResult] = await Promise.all([
             supabase
                 .from("lists")
@@ -56,7 +44,6 @@ export const getCachedBoardWithLists = unstable_cache(
         const lists = listsResult.data || [];
         const labels = labelsResult.data || [];
 
-        // Get all cards for these lists
         const listIds = lists.map((l) => l.id);
         
         if (listIds.length === 0) {
@@ -73,7 +60,6 @@ export const getCachedBoardWithLists = unstable_cache(
             .in("list_id", listIds)
             .order("position", { ascending: true });
 
-        // Get card relations in parallel
         const cardIds = cards?.map((c) => c.id) || [];
         
         if (cardIds.length === 0) {
@@ -129,14 +115,10 @@ export const getCachedBoardWithLists = unstable_cache(
     }
 );
 
-/**
- * Get cached workspaces for user
- */
 export const getCachedWorkspaces = unstable_cache(
     async (userId: string) => {
         const supabase = await createClient();
 
-        // Get workspaces where user is a member
         const { data: memberships } = await supabase
             .from("workspace_members")
             .select("workspace_id")
@@ -163,14 +145,10 @@ export const getCachedWorkspaces = unstable_cache(
     }
 );
 
-/**
- * Get cached boards for workspace
- */
 export const getCachedBoards = unstable_cache(
     async (workspaceId: string, userId: string) => {
         const supabase = await createClient();
 
-        // Check membership
         const { data: membership } = await supabase
             .from("workspace_members")
             .select("*")
@@ -197,14 +175,10 @@ export const getCachedBoards = unstable_cache(
     }
 );
 
-/**
- * Get cached workspace members
- */
 export const getCachedWorkspaceMembers = unstable_cache(
     async (workspaceId: string, userId: string) => {
         const supabase = await createClient();
 
-        // Verify user is a member
         const { data: membership } = await supabase
             .from("workspace_members")
             .select("role")

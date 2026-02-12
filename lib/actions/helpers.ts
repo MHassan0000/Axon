@@ -37,11 +37,6 @@ const roleHierarchy: Record<RoleType, number> = {
   member: 1,
 };
 
-/**
- * Verify if the current user has access to a workspace
- * @param workspaceId - The workspace ID to check
- * @param requiredRole - Optional minimum role required (owner > admin > member)
- */
 export async function verifyWorkspaceAccess(
   workspaceId: string,
   requiredRole?: RoleType
@@ -70,11 +65,6 @@ export async function verifyWorkspaceAccess(
   return { allowed: true, role: memberRole, userId: user.id };
 }
 
-/**
- * Verify if the current user has access to a board
- * @param boardId - The board ID to check
- * @param requiredRole - Optional minimum role required
- */
 export async function verifyBoardAccess(
   boardId: string,
   requiredRole?: RoleType
@@ -96,11 +86,6 @@ export async function verifyBoardAccess(
   return { ...access, workspaceId: board.workspace_id };
 }
 
-/**
- * Verify if the current user has access to a list
- * @param listId - The list ID to check
- * @param requiredRole - Optional minimum role required
- */
 export async function verifyListAccess(
   listId: string,
   requiredRole?: RoleType
@@ -134,11 +119,6 @@ export async function verifyListAccess(
   };
 }
 
-/**
- * Verify if the current user has access to a card
- * @param cardId - The card ID to check
- * @param requiredRole - Optional minimum role required
- */
 export async function verifyCardAccess(
   cardId: string,
   requiredRole?: RoleType
@@ -167,11 +147,6 @@ export async function verifyCardAccess(
   return { ...access, workspaceId, boardId };
 }
 
-/**
- * Verify if the current user has access to a checklist
- * @param checklistId - The checklist ID to check
- * @param requiredRole - Optional minimum role required
- */
 export async function verifyChecklistAccess(
   checklistId: string,
   requiredRole?: RoleType
@@ -207,11 +182,6 @@ export async function verifyChecklistAccess(
   return { ...access, workspaceId, boardId, cardId };
 }
 
-/**
- * Verify if the current user has access to a checklist item
- * @param itemId - The checklist item ID to check
- * @param requiredRole - Optional minimum role required
- */
 export async function verifyChecklistItemAccess(
   itemId: string,
   requiredRole?: RoleType

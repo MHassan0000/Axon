@@ -6,15 +6,13 @@ import { verifyCardAccess } from "./helpers";
 import type { Attachment } from "@/lib/types/database";
 
 const BUCKET_NAME = "attachments";
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = [
-  // Images
   "image/jpeg",
   "image/png",
   "image/gif",
   "image/webp",
   "image/svg+xml",
-  // Documents
   "application/pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -22,18 +20,13 @@ const ALLOWED_TYPES = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "application/vnd.ms-powerpoint",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  // Text
   "text/plain",
   "text/csv",
   "application/json",
-  // Archives
   "application/zip",
   "application/x-rar-compressed",
 ];
 
-/**
- * Upload a file attachment to a card
- */
 export async function uploadAttachment(
   cardId: string,
   formData: FormData
@@ -45,7 +38,6 @@ export async function uploadAttachment(
     return null;
   }
 
-  // Verify user has access to this card
   const access = await verifyCardAccess(cardId);
   if (!access.allowed) {
     console.error("User does not have access to this card");
@@ -58,13 +50,11 @@ export async function uploadAttachment(
     return null;
   }
 
-  // Validate file size
   if (file.size > MAX_FILE_SIZE) {
     console.error("File too large");
     return null;
   }
 
-  // Validate file type
   if (!ALLOWED_TYPES.includes(file.type)) {
     console.error("File type not allowed:", file.type);
     return null;
@@ -72,16 +62,13 @@ export async function uploadAttachment(
 
   const supabase = await createClient();
 
-  // Generate unique file path
   const timestamp = Date.now();
   const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
   const filePath = `${cardId}/${timestamp}-${safeName}`;
 
-  // Convert File to ArrayBuffer then to Uint8Array for upload
   const arrayBuffer = await file.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
 
-  // Upload to Supabase Storage
   const { data: uploadData, error: uploadError } = await supabase.storage
     .from(BUCKET_NAME)
     .upload(filePath, uint8Array, {
@@ -94,12 +81,10 @@ export async function uploadAttachment(
     return null;
   }
 
-  // Get public URL
   const { data: urlData } = supabase.storage
     .from(BUCKET_NAME)
     .getPublicUrl(filePath);
 
-  // Create attachment record
   const { data: attachment, error: dbError } = await supabase
     .from("attachments")
     .insert({
@@ -115,12 +100,11 @@ export async function uploadAttachment(
 
   if (dbError) {
     console.error("Error creating attachment record:", dbError);
-    // Try to clean up uploaded file
+
     await supabase.storage.from(BUCKET_NAME).remove([filePath]);
     return null;
   }
 
-  // Log activity
   if (access.boardId) {
     await supabase.from("activity_log").insert({
       card_id: cardId,
@@ -134,11 +118,8 @@ export async function uploadAttachment(
   return attachment;
 }
 
-/**
- * Get all attachments for a card
- */
 export async function getAttachments(cardId: string): Promise<Attachment[]> {
-  // Verify user has access to this card
+
   const access = await verifyCardAccess(cardId);
   if (!access.allowed) {
     console.error("User does not have access to this card");
@@ -161,9 +142,6 @@ export async function getAttachments(cardId: string): Promise<Attachment[]> {
   return attachments || [];
 }
 
-/**
- * Delete an attachment
- */
 export async function deleteAttachment(attachmentId: string): Promise<boolean> {
   const user = await getCurrentUser();
 
@@ -173,7 +151,6 @@ export async function deleteAttachment(attachmentId: string): Promise<boolean> {
 
   const supabase = await createClient();
 
-  // Get the attachment
   const { data: attachment } = await supabase
     .from("attachments")
     .select("*, cards(list_id, lists(board_id))")
@@ -185,22 +162,19 @@ export async function deleteAttachment(attachmentId: string): Promise<boolean> {
     return false;
   }
 
-  // Verify user has access to this card
   const access = await verifyCardAccess(attachment.card_id);
   if (!access.allowed) {
     console.error("User does not have access to delete this attachment");
     return false;
   }
 
-  // Extract file path from URL
   const urlParts = attachment.url.split(`/${BUCKET_NAME}/`);
   if (urlParts.length > 1) {
     const filePath = urlParts[1];
-    // Delete from storage
+
     await supabase.storage.from(BUCKET_NAME).remove([filePath]);
   }
 
-  // Delete from database
   const { error } = await supabase
     .from("attachments")
     .delete()
@@ -214,10 +188,6 @@ export async function deleteAttachment(attachmentId: string): Promise<boolean> {
   return true;
 }
 
-/**
- * Upload attachment during card creation (before card has an ID)
- * Returns the file data to be uploaded after card is created
- */
 export async function prepareAttachment(formData: FormData): Promise<{
   file: {
     name: string;
@@ -231,19 +201,16 @@ export async function prepareAttachment(formData: FormData): Promise<{
     return null;
   }
 
-  // Validate file size
   if (file.size > MAX_FILE_SIZE) {
     console.error("File too large");
     return null;
   }
 
-  // Validate file type
   if (!ALLOWED_TYPES.includes(file.type)) {
     console.error("File type not allowed:", file.type);
     return null;
   }
 
-  // Convert to base64 for temporary storage
   const arrayBuffer = await file.arrayBuffer();
   const base64 = Buffer.from(arrayBuffer).toString("base64");
 
@@ -257,9 +224,6 @@ export async function prepareAttachment(formData: FormData): Promise<{
   };
 }
 
-/**
- * Upload a prepared attachment to a card (used after card creation)
- */
 export async function uploadPreparedAttachment(
   cardId: string,
   fileData: {
@@ -276,7 +240,6 @@ export async function uploadPreparedAttachment(
     return null;
   }
 
-  // Verify user has access to this card
   const access = await verifyCardAccess(cardId);
   if (!access.allowed) {
     console.error("User does not have access to this card");
@@ -285,15 +248,12 @@ export async function uploadPreparedAttachment(
 
   const supabase = await createClient();
 
-  // Generate unique file path
   const timestamp = Date.now();
   const safeName = fileData.name.replace(/[^a-zA-Z0-9.-]/g, "_");
   const filePath = `${cardId}/${timestamp}-${safeName}`;
 
-  // Convert base64 back to buffer
   const buffer = Buffer.from(fileData.data, "base64");
 
-  // Upload to Supabase Storage
   const { error: uploadError } = await supabase.storage
     .from(BUCKET_NAME)
     .upload(filePath, buffer, {
@@ -306,12 +266,10 @@ export async function uploadPreparedAttachment(
     return null;
   }
 
-  // Get public URL
   const { data: urlData } = supabase.storage
     .from(BUCKET_NAME)
     .getPublicUrl(filePath);
 
-  // Create attachment record
   const { data: attachment, error: dbError } = await supabase
     .from("attachments")
     .insert({
@@ -327,7 +285,6 @@ export async function uploadPreparedAttachment(
 
   if (dbError) {
     console.error("Error creating attachment record:", dbError);
-    // Try to clean up uploaded file
     await supabase.storage.from(BUCKET_NAME).remove([filePath]);
     return null;
   }
